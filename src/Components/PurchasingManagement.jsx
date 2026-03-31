@@ -4,10 +4,10 @@ import { Badge, Btn, Modal, Field } from "../components/Primitives";
 
 export default function PurchasingManagement({
   purchaseOrders,
-  setPurchaseOrders,
   products,
-  setProducts,
   suppliers,
+  onCreatePO,
+  onReceivePO,
 }) {
   const [modal,   setModal]   = useState(null);
   const [form,    setForm]    = useState({ supplierId: "", expectedDate: "" });
@@ -25,42 +25,32 @@ export default function PurchasingManagement({
   };
 
   // ── Save PO ────────────────────────────────────────────────────────────────
-  const savePO = () => {
+  const savePO = async () => {
     const items = poItems
       .filter(i => i.productId)
       .map(i => ({ ...i, qty: +i.qty, unitCost: +i.unitCost }));
     const total = items.reduce((s, i) => s + i.qty * i.unitCost, 0);
-    setPurchaseOrders(prev => [
-      {
-        id: "po" + Date.now(),
-        date: new Date().toISOString().slice(0, 10),
-        supplierId: form.supplierId,
-        items,
-        status: "pending",
-        total,
-        expectedDate: form.expectedDate,
-        receivedDate: null,
-      },
-      ...prev,
-    ]);
+    const newPO = {
+      id: "po" + Date.now(),
+      date: new Date().toISOString().slice(0, 10),
+      supplierId: form.supplierId,
+      items,
+      status: "pending",
+      total,
+      expectedDate: form.expectedDate,
+      receivedDate: null,
+    };
+    if (onCreatePO) {
+      await onCreatePO(newPO);
+    }
     setModal(null);
   };
 
   // ── Receive delivery ───────────────────────────────────────────────────────
-  const receiveOrder = po => {
-    setPurchaseOrders(prev =>
-      prev.map(p =>
-        p.id === po.id
-          ? { ...p, status: "received", receivedDate: new Date().toISOString().slice(0, 10) }
-          : p
-      )
-    );
-    setProducts(prev =>
-      prev.map(p => {
-        const item = po.items.find(i => i.productId === p.id);
-        return item ? { ...p, stock: p.stock + item.qty } : p;
-      })
-    );
+  const receiveOrder = async po => {
+    if (onReceivePO) {
+      await onReceivePO(po);
+    }
   };
 
   const statusColor = { pending: "yellow", transit: "blue", received: "green", cancelled: "red" };

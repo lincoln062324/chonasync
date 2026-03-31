@@ -19,6 +19,9 @@ export default function POS({
   transactions,
   setTransactions,
   loadProducts = [],   // ← e-load catalog passed from App
+  onCheckout,
+  onCheckoutEload,
+  onProcessReturn,
 }) {
   // ── Mode: "products" | "eloading" ──────────────────────────────────────────
   const [mode, setMode] = useState("products");
@@ -79,7 +82,7 @@ export default function POS({
   const total    = subtotal + tax - +discount;
   const change   = +payment - total;
 
-  const checkout = () => {
+  const checkout = async () => {
     if (!payment || +payment < total) { alert("Insufficient payment amount."); return; }
     const txn = {
       id: "t" + Date.now(),
@@ -87,14 +90,20 @@ export default function POS({
       items: cart.map(i => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price })),
       subtotal, tax, discount: +discount, total, payment: +payment, change, method: "cash",
     };
-    setTransactions(prev => [txn, ...prev]);
-    setProducts(prev =>
-      prev.map(p => {
-        const ci = cart.find(i => i.productId === p.id);
-        return ci ? { ...p, stock: p.stock - ci.qty } : p;
-      })
-    );
-    setReceipt(txn);
+
+    const savedTxn = onCheckout ? await onCheckout(txn) : txn;
+
+    if (!onCheckout) {
+      setTransactions(prev => [txn, ...prev]);
+      setProducts(prev =>
+        prev.map(p => {
+          const ci = cart.find(i => i.productId === p.id);
+          return ci ? { ...p, stock: p.stock - ci.qty } : p;
+        })
+      );
+    }
+
+    setReceipt(savedTxn || txn);
     setCart([]);
     setDiscount(0);
     setPayment("");
@@ -107,15 +116,14 @@ export default function POS({
     setReturnItems(txn.items.map(i => ({ ...i, returnQty: 0 })));
   };
 
-  const processReturn = () => {
+  const processReturn = async () => {
     const itemsToReturn = returnItems.filter(i => i.returnQty > 0);
     if (itemsToReturn.length === 0) { alert("No items selected for return"); return; }
-    setProducts(prev =>
-      prev.map(p => {
-        const ri = itemsToReturn.find(i => i.productId === p.id);
-        return ri ? { ...p, stock: p.stock + +ri.returnQty } : p;
-      })
-    );
+
+    if (onProcessReturn) {
+      await onProcessReturn(itemsToReturn);
+    }
+
     alert(`Return processed! ${itemsToReturn.reduce((s, i) => s + +i.returnQty, 0)} items restocked.`);
     setReturnModal(false);
     setReturnTxId("");
@@ -150,7 +158,7 @@ export default function POS({
   const eloadTotal = eloadSubtotal - +eloadDiscount;
   const eloadChange = +eloadPayment - eloadTotal;
 
-  const checkoutEload = () => {
+  const checkoutEload = async () => {
     if (eloadCart.length === 0) { alert("No load items in cart."); return; }
     if (!eloadPayment || +eloadPayment < eloadTotal) { alert("Insufficient payment amount."); return; }
 
@@ -176,8 +184,14 @@ export default function POS({
       change: eloadChange,
       method: "cash",
     };
-    setTransactions(prev => [txn, ...prev]);
-    setEloadReceipt(txn);
+
+    const savedTxn = onCheckoutEload ? await onCheckoutEload(txn) : txn;
+
+    if (!onCheckoutEload) {
+      setTransactions(prev => [txn, ...prev]);
+    }
+
+    setEloadReceipt(savedTxn || txn);
     setEloadCart([]);
     setEloadDiscount(0);
     setEloadPayment("");

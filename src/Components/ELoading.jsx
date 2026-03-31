@@ -39,7 +39,7 @@ const blank = () => ({
   profit: "",
 });
 
-export default function ELoading({ loadProducts, setLoadProducts }) {
+export default function ELoading({ loadProducts, onAdd, onUpdate, onDelete }) {
   const [modal,   setModal]   = useState(false);
   const [editing, setEditing] = useState(null); // null = add new
   const [form,    setForm]    = useState(blank());
@@ -73,20 +73,27 @@ export default function ELoading({ loadProducts, setLoadProducts }) {
     });
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.network || !form.denomination || !form.name) {
       alert("Please fill in Network, Denomination and Name."); return;
     }
     if (editing) {
-      setLoadProducts(prev => prev.map(lp => lp.id === editing ? { ...form } : lp));
+      if (onUpdate) {
+        await onUpdate(editing, { ...form });
+      }
     } else {
-      setLoadProducts(prev => [...prev, { ...form, id: "lp" + Date.now() }]);
+      const newLp = { ...form, id: "lp" + Date.now() };
+      if (onAdd) {
+        await onAdd(newLp);
+      }
     }
     closeModal();
   };
 
-  const remove = (id) => {
-    setLoadProducts(prev => prev.filter(lp => lp.id !== id));
+  const remove = async (id) => {
+    if (onDelete) {
+      await onDelete(id);
+    }
     setDelConfirm(null);
   };
 

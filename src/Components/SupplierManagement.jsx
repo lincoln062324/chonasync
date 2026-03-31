@@ -70,14 +70,14 @@ function StarRating({ value, onChange, readonly = false }) {
 }
 
 /* ─── SUPPLIER MANAGEMENT ────────────────────────────────────────────────── */
-export default function SupplierManagement({ suppliers, setSuppliers, purchaseOrders }) {
+export default function SupplierManagement({ suppliers, purchaseOrders, onAddSupplier, onUpdateSupplier, onDeleteSupplier }) {
   const [modal,    setModal]    = useState(null);   // "add" | "edit" | null
   const [selected, setSelected] = useState(null);
   const [form,     setForm]     = useState({});
 
   const openAdd = () => {
     setForm({
-      name: "", contact:"", terms: "CASH", rating: 0,
+      name: "", terms: "CASH", rating: 0,
     });
     setModal("add");
   };
@@ -85,28 +85,38 @@ export default function SupplierManagement({ suppliers, setSuppliers, purchaseOr
   const openEdit = s => { setSelected(s); setForm({ ...s }); setModal("edit"); };
   const f        = k => e => setForm(prev => ({ ...prev, [k]: e.target.value }));
 
-  const save = () => {
+  const save = async () => {
     if (modal === "add") {
-      setSuppliers(prev => [
-        ...prev,
-        { ...form, id: "s" + Date.now(), totalOrders: 0, onTimeDelivery: 100, deliveryTime: 3 },
-      ]);
-    } else {
-      setSuppliers(prev => prev.map(s => s.id === selected.id ? { ...s, ...form } : s));
+      const newSupplier = {
+        ...form,
+        id: "s" + Date.now(),
+        totalOrders: 0,
+        onTimeDelivery: 100,
+        deliveryTime: 3,
+      };
+      if (onAddSupplier) {
+        await onAddSupplier(newSupplier);
+      }
+    } else if (selected) {
+      if (onUpdateSupplier) {
+        await onUpdateSupplier(selected.id, { ...form });
+      }
     }
     setModal(null);
   };
 
-  const del = id => {
-    if (window.confirm("Delete supplier?"))
-      setSuppliers(prev => prev.filter(s => s.id !== id));
+  const del = async id => {
+    if (!window.confirm("Delete supplier?")) return;
+    if (onDeleteSupplier) {
+      await onDeleteSupplier(id);
+    }
   };
 
   /* Update rating directly on the card (without opening edit modal) */
-  const updateRatingInline = (supplierId, newRating) => {
-    setSuppliers(prev =>
-      prev.map(s => s.id === supplierId ? { ...s, rating: newRating } : s)
-    );
+  const updateRatingInline = async (supplierId, newRating) => {
+    if (onUpdateSupplier) {
+      await onUpdateSupplier(supplierId, { rating: newRating });
+    }
   };
 
   return (
@@ -132,7 +142,6 @@ export default function SupplierManagement({ suppliers, setSuppliers, purchaseOr
               <div className="supplier-card__header">
                 <div>
                   <div className="supplier-card__name">{s.name}</div>
-                  <div className="supplier-card__contact">{s.contact}</div>
                 </div>
                 <div className="btn-row">
                   <Btn size="sm" variant="secondary" onClick={() => openEdit(s)}>
@@ -202,9 +211,6 @@ export default function SupplierManagement({ suppliers, setSuppliers, purchaseOr
         <div className="form-grid-2">
           <Field label="Company Name" required>
             <input className="input" value={form.name    || ""} onChange={f("name")} />
-          </Field>
-          <Field label="Contact Person">
-            <input className="input" value={form.contact || ""} onChange={f("contact")} />
           </Field>
           <Field label="Payment Terms">
             <select className="select" value={form.terms || "CASH"} onChange={f("terms")}>

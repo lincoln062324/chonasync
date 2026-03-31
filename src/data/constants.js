@@ -7,14 +7,17 @@ export const INITIAL_SUPPLIERS = [
 ];
 
 export const INITIAL_PRODUCTS = [
-  { id: "p1", name: "Coke 1.5L",        sku: "BEV-001", category: "Beverages",       supplierId: "s1", cost: 48, price: 65, stock: 45, reserved: 5, damaged: 2, reorderLevel: 20, unit: "bottle",  variants: [] },
-  { id: "p2", name: "Lay's Chips",       sku: "SNK-001", category: "Snacks",           supplierId: "s2", cost: 25, price: 35, stock: 12, reserved: 0, damaged: 1, reorderLevel: 15, unit: "pack",    variants: [{ name: "Flavor",   options: ["Original", "BBQ", "Cheese"] }] },
-  { id: "p3", name: "Lucky Me Noodles",  sku: "FD-001",  category: "Canned/Dry Goods", supplierId: "s1", cost:  8, price: 14, stock:  3, reserved: 0, damaged: 0, reorderLevel: 30, unit: "pack",    variants: [{ name: "Flavor",   options: ["Beef", "Chicken", "Spicy"] }] },
-  { id: "p4", name: "Tide Powder 1kg",   sku: "HH-001",  category: "Household",        supplierId: "s3", cost: 52, price: 78, stock:  0, reserved: 0, damaged: 0, reorderLevel: 10, unit: "bag",     variants: [] },
-  { id: "p5", name: "Palmolive Shampoo", sku: "PC-001",  category: "Personal Care",    supplierId: "s2", cost: 70, price: 98, stock: 28, reserved: 2, damaged: 0, reorderLevel: 15, unit: "bottle",  variants: [{ name: "Type",     options: ["Smooth", "Volume", "Anti-Dandruff"] }] },
-  { id: "p6", name: "Eden Cheese 165g",  sku: "FD-002",  category: "Dairy",            supplierId: "s1", cost: 55, price: 75, stock: 17, reserved: 0, damaged: 1, reorderLevel: 12, unit: "pack",    variants: [] },
-  { id: "p7", name: "Kopiko Coffee",     sku: "BEV-002", category: "Beverages",        supplierId: "s2", cost:  4, price:  7, stock: 88, reserved: 0, damaged: 0, reorderLevel: 50, unit: "sachet",  variants: [{ name: "Variant",  options: ["Black", "Brown", "Cappuccino"] }] },
-  { id: "p8", name: "Mang Tomas Sauce",  sku: "FD-003",  category: "Condiments",       supplierId: "s3", cost: 28, price: 42, stock:  9, reserved: 0, damaged: 0, reorderLevel: 15, unit: "bottle",  variants: [] },
+  { id: "p1",  name: "Coke 1.5L",          sku: "BEV-001",  category: "Beverages",       supplierId: "s1", cost: 48, price: 65,  stock: 45, reserved: 5, damaged: 2, reorderLevel: 20, unit: "bottle",  variants: [] },
+  { id: "p2",  name: "Lay's Chips",         sku: "SNK-001",  category: "Snacks",           supplierId: "s2", cost: 25, price: 35,  stock: 12, reserved: 0, damaged: 1, reorderLevel: 15, unit: "pack",    variants: [{ name: "Flavor",  options: ["Original", "BBQ", "Cheese"] }] },
+  { id: "p3",  name: "Lucky Me Noodles",    sku: "FD-001",   category: "Canned/Dry Goods", supplierId: "s1", cost:  8, price: 14,  stock:  3, reserved: 0, damaged: 0, reorderLevel: 30, unit: "pack",    variants: [{ name: "Flavor",  options: ["Beef", "Chicken", "Spicy"] }] },
+  { id: "p4",  name: "Tide Powder 1kg",     sku: "HH-001",   category: "Household",        supplierId: "s3", cost: 52, price: 78,  stock:  0, reserved: 0, damaged: 0, reorderLevel: 10, unit: "bag",     variants: [] },
+  { id: "p5",  name: "Palmolive Shampoo",   sku: "PC-001",   category: "Personal Care",    supplierId: "s2", cost: 70, price: 98,  stock: 28, reserved: 2, damaged: 0, reorderLevel: 15, unit: "bottle",  variants: [{ name: "Type",    options: ["Smooth", "Volume", "Anti-Dandruff"] }] },
+  { id: "p6",  name: "Eden Cheese 165g",    sku: "FD-002",   category: "Dairy",            supplierId: "s1", cost: 55, price: 75,  stock: 17, reserved: 0, damaged: 1, reorderLevel: 12, unit: "pack",    variants: [] },
+  { id: "p7",  name: "Kopiko Coffee",       sku: "BEV-002",  category: "Beverages",        supplierId: "s2", cost:  4, price:  7,  stock: 88, reserved: 0, damaged: 0, reorderLevel: 50, unit: "sachet",  variants: [{ name: "Variant", options: ["Black", "Brown", "Cappuccino"] }] },
+  { id: "p8",  name: "Mang Tomas Sauce",    sku: "FD-003",   category: "Condiments",       supplierId: "s3", cost: 28, price: 42,  stock:  9, reserved: 0, damaged: 0, reorderLevel: 15, unit: "bottle",  variants: [] },
+  { id: "p9",  name: "Marlboro Red",        sku: "CIG-001",  category: "Cigarettes",       supplierId: "s1", cost: 95, price: 115, stock: 30, reserved: 0, damaged: 0, reorderLevel: 10, unit: "pack",    variants: [] },
+  { id: "p10", name: "Philip Morris Blue",  sku: "CIG-002",  category: "Cigarettes",       supplierId: "s1", cost: 90, price: 110, stock: 25, reserved: 0, damaged: 0, reorderLevel: 10, unit: "pack",    variants: [] },
+  { id: "p11", name: "Fortune Menthol",     sku: "CIG-003",  category: "Cigarettes",       supplierId: "s2", cost: 65, price: 80,  stock: 40, reserved: 0, damaged: 0, reorderLevel: 15, unit: "pack",    variants: [] },
 ];
 
 export const INITIAL_TRANSACTIONS = [
@@ -41,15 +44,34 @@ export const CATEGORIES = [
   "Personal Care",
   "Dairy",
   "Condiments",
+  "Cigarettes",   // ← added
   "Other",
 ];
 
+// Emoji icon + accent color per category — used in StockManagement sidebar
+export const CATEGORY_META = {
+  "Beverages":       { emoji: "🥤", color: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
+  "Snacks":          { emoji: "🍟", color: "#92400e", bg: "#fef3c7", border: "#fde68a" },
+  "Canned/Dry Goods":{ emoji: "🥫", color: "#065f46", bg: "#ecfdf5", border: "#a7f3d0" },
+  "Household":       { emoji: "🏠", color: "#6d28d9", bg: "#f5f3ff", border: "#ddd6fe" },
+  "Personal Care":   { emoji: "🧴", color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
+  "Dairy":           { emoji: "🧀", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa" },
+  "Condiments":      { emoji: "🍶", color: "#4f46e5", bg: "#eef2ff", border: "#c7d2fe" },
+  "Cigarettes":      { emoji: "🚬", color: "#475569", bg: "#f8fafc", border: "#cbd5e1" },
+  "Other":           { emoji: "📦", color: "#374151", bg: "#f9fafb", border: "#e5e7eb" },
+};
+
+// Add this to your existing constants.js — replace the NAV_ITEMS export
+
 export const NAV_ITEMS = [
-  { id: "dashboard",  label: "Dashboard",  icon: "dashboard" },
-  { id: "stock",      label: "Stock",      icon: "box" },
-  { id: "pos",        label: "POS",        icon: "pos" },
-  { id: "purchasing", label: "Purchasing", icon: "truck" },
-  { id: "suppliers",  label: "Suppliers",  icon: "users" },
-  { id: "alerts",     label: "Alerts",     icon: "bell" },   // badge injected in App
-  { id: "reports",    label: "Reports",    icon: "chart" },
+  { id: "dashboard",    label: "Dashboard",     icon: "dashboard" },
+  { id: "stock",        label: "Stock",          icon: "box"       },
+  { id: "pos",          label: "POS",            icon: "pos"       },
+  { id: "eloading",     label: "E-Loading",      icon: "pos"       },
+  { id: "saleshistory", label: "Sales History",  icon: "chart"     },  // ← NEW
+  { id: "purchasing",   label: "Purchasing",     icon: "truck"     },
+  { id: "suppliers",    label: "Suppliers",      icon: "users"     },
+  { id: "alerts",       label: "Alerts",         icon: "bell"      },
+  { id: "reports",      label: "Reports",        icon: "chart"     },
 ];
+

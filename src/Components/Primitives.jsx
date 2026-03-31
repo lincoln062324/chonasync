@@ -1,4 +1,4 @@
-import Icon from "./Icon";
+import Icon from "../components/Icon";
 
 // ─── BADGE ────────────────────────────────────────────────────────────────────
 export function Badge({ children, color = "gray" }) {
