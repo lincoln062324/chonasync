@@ -127,6 +127,12 @@ button { font-family: inherit; }
   border-bottom: 1px solid #1e293b;
   margin-bottom: 8px;
 }
+.logopaw{
+  position: absolute;
+  width: 40px;
+  height: 40px;
+
+}
 
 .sidebar__brand-name {
   font-family: 'Sora', sans-serif;
@@ -137,6 +143,7 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: 40px;
 }
 
 .sidebar__brand-sub {
@@ -145,6 +152,7 @@ button { font-family: inherit; }
   margin-top: 3px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  margin-left: 40px;
 }
 
 .sidebar__nav {

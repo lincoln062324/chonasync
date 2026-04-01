@@ -15,7 +15,8 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
-        <div className="sidebar__brand-name">📦 ChonaSync</div>
+            <img className="logopaw" src="/paw.png" alt="ChonaSync Logo" />
+        <div className="sidebar__brand-name"> ChonaSync</div>
         <div className="sidebar__brand-sub">Tindahan System</div>
       </div>
 

@@ -172,7 +172,9 @@ export default function Login({ onLogin }) {
 
         {/* Brand */}
         <div style={{ textAlign: "center", marginBottom: 22 }}>
-          <div style={{ fontSize: 38, marginBottom: 8 }}>📦</div>
+          <div style={{ fontSize: 38, marginBottom: 8 }}>
+            <img src="/paw.png" alt="ChonaSync Logo" style={{ width: 60, height: 60, marginBottom: -25 }} />
+          </div>
           <div style={{ fontFamily: "'Sora', sans-serif", fontSize: 21, fontWeight: 800, color: "#0f172a" }}>
             ChonaSync
           </div>
