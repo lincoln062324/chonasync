@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Icon from "../components/Icon";
-import { Badge, Btn, Modal, Field } from "../components/Primitives";
+import Icon from "../Components/Icon";
+import { Badge, Btn, Modal, Field } from "../Components/Primitives";
 
 export default function PurchasingManagement({
   purchaseOrders,

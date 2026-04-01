@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { Badge, StatCard } from "../components/Primitives";
-import Icon from "../components/Icon";
+import { Badge, StatCard } from "../Components/Primitives";
+import Icon from "../Components/Icon";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt  = (n) => `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;

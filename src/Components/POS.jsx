@@ -1,6 +1,6 @@
 import { useState } from "react";
-import Icon from "../components/Icon";
-import { Btn, Modal, Field } from "../components/Primitives";
+import Icon from "../Components/Icon";
+import { Btn, Modal, Field } from "../Components/Primitives";
 import { TAX_RATE } from "../data/constants";
 
 const NETWORK_COLORS = {

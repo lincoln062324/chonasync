@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Btn, Modal, Field, Badge } from "../components/Primitives";
-import Icon from "../components/Icon";
+import { Btn, Modal, Field, Badge } from "../Components/Primitives";
+import Icon from "../Components/Icon";
 
 const AVATAR_COLORS = [
   "#4f46e5","#059669","#dc2626","#d97706","#7c3aed",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Badge, StatCard } from "../components/Primitives";
+import { Badge, StatCard } from "../Components/Primitives";
 
 const TABS = [
   { id: "valuation", label: "Inventory Valuation" },

@@ -1,5 +1,5 @@
-import Icon from "../components/Icon";
-import { StatCard } from "../components/Primitives";
+import Icon from "../Components/Icon";
+import { StatCard } from "../Components/Primitives";
 
 const fmt = (n) =>
   `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

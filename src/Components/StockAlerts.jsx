@@ -1,5 +1,5 @@
-import Icon from "../components/Icon";
-import { Badge } from "../components/Primitives";
+import Icon from "../Components/Icon";
+import { Badge } from "../Components/Primitives";
 
 export default function StockAlerts({ products }) {
   const outOfStock = products.filter(p => p.stock === 0);

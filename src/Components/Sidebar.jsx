@@ -1,4 +1,4 @@
-import Icon from "../components/Icon";
+import Icon from "../Components/Icon";
 import { NAV_ITEMS } from "../data/constants";
 
 const ROLE_COLORS = {
