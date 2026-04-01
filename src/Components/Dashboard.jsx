@@ -53,7 +53,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
           <div>
             <div className="stat-card__value">{products.length}</div>
             <div className="stat-card__label">Total Products</div>
-            <div className="stat-card__nav-hint">→ Stock Management</div>
           </div>
         </div>
 
@@ -64,7 +63,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
           <div>
             <div className="stat-card__value">{fmt(totalValue)}</div>
             <div className="stat-card__label">Inventory Value</div>
-            <div className="stat-card__nav-hint">→ Stock Management</div>
           </div>
         </div>
 
@@ -76,7 +74,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
             <div className="stat-card__value">{fmt(productRevenue)}</div>
             <div className="stat-card__label">Product Revenue</div>
             <div className="stat-card__sub">{productTxns.length} transactions</div>
-            <div className="stat-card__nav-hint">→ Sales History</div>
           </div>
         </div>
 
@@ -88,7 +85,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
             <div className="stat-card__value">{fmt(eloadRevenue)}</div>
             <div className="stat-card__label">E-Load Revenue</div>
             <div className="stat-card__sub">{fmt(eloadProfit)} profit · {eloadTxns.length} txns</div>
-            <div className="stat-card__nav-hint">→ Sales History</div>
           </div>
         </div>
 
@@ -100,7 +96,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
             <div className="stat-card__value">{lowStock} / {outOfStock}</div>
             <div className="stat-card__label">Low / Out of Stock</div>
             <div className="stat-card__sub">Items needing attention</div>
-            <div className="stat-card__nav-hint">→ Stock Alerts</div>
           </div>
         </div>
 
@@ -112,7 +107,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
             <div className="stat-card__value">{pendingPOs}</div>
             <div className="stat-card__label">Pending Orders</div>
             <div className="stat-card__sub">Purchase orders</div>
-            <div className="stat-card__nav-hint">→ Purchasing</div>
           </div>
         </div>
 
@@ -123,7 +117,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
           <div>
             <div className="stat-card__value">{suppliers.length}</div>
             <div className="stat-card__label">Suppliers</div>
-            <div className="stat-card__nav-hint">→ Supplier Management</div>
           </div>
         </div>
 
@@ -142,7 +135,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
           ) : recentProductTxns.map(t => (
             <div key={t.id} className="dash-txn-row">
               <div>
-                <div className="dash-txn-id">{t.id.toUpperCase()}</div>
                 <div className="dash-txn-sub">{t.date} · {t.items?.length ?? 0} items</div>
               </div>
               <div className="dash-txn-total">{fmt(t.total)}</div>
@@ -160,7 +152,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
           ) : recentEloadTxns.map(t => (
             <div key={t.id} className="dash-txn-row">
               <div>
-                <div className="dash-txn-id">{t.id.toUpperCase()}</div>
                 <div className="dash-txn-sub">{t.date} · {t.items?.length ?? 0} loads</div>
               </div>
               <div style={{ textAlign:"right" }}>

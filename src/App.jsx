@@ -8,9 +8,11 @@ import {
   fetchEloadTransactions, saveEloadTransaction,
   fetchLoadProducts,      createLoadProduct,   updateLoadProduct,   deleteLoadProduct,
   fetchPurchaseOrders,    createPurchaseOrder, receivePurchaseOrder,
-  incrementStock,
+  incrementStock,         logActivity,
 } from "./lib/supabase";
 
+import { useAuth }          from "./hooks/useAuth";
+import Login                from "./Components/Login";
 import Sidebar              from "./Components/Sidebar";
 import Dashboard            from "./Components/Dashboard";
 import StockManagement      from "./Components/StockManagement";
@@ -21,8 +23,11 @@ import SupplierManagement   from "./Components/SupplierManagement";
 import StockAlerts          from "./Components/StockAlerts";
 import Reports              from "./Components/Reports";
 import SalesHistory         from "./Components/SalesHistory";
+import AccountsActivity     from "./Components/AccountsActivity";
 
 export default function App() {
+  const { user, login, logout } = useAuth();
+
   const [products,       setProducts]       = useState([]);
   const [suppliers,      setSuppliers]      = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -60,6 +65,17 @@ export default function App() {
 
   const lowStockCount = products.filter(p => p.stock === 0 || p.stock <= p.reorderLevel).length;
   const isPos         = activeModule === "pos";
+
+  // Log module navigation
+  const navigate = (moduleId) => {
+    setActiveModule(moduleId);
+    if (user) logActivity(user.id, "navigate", `Opened ${moduleId}`).catch(() => {});
+  };
+
+  // Show login screen if not authenticated
+  if (!user) {
+    return <Login onLogin={login} />;
+  }
 
   const handleSaveTransaction = async (txn) => {
     try {
@@ -120,7 +136,13 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} lowStockCount={lowStockCount} />
+      <Sidebar
+        activeModule={activeModule}
+        setActiveModule={navigate}
+        lowStockCount={lowStockCount}
+        user={user}
+        onLogout={() => logout(user?.id)}
+      />
 
       <main className="main-content">
         <div className={isPos ? "main-content--pos" : "main-content--padded"}>
@@ -129,7 +151,7 @@ export default function App() {
             <Dashboard
               products={products} transactions={transactions}
               purchaseOrders={purchaseOrders} suppliers={suppliers}
-              setActiveModule={setActiveModule}
+              setActiveModule={navigate}
             />
           )}
 
@@ -204,6 +226,12 @@ export default function App() {
             <Reports products={products} transactions={transactions}
               purchaseOrders={purchaseOrders} suppliers={suppliers} />
           )}
+
+          {/* ── Accounts & Activity ── */}
+          {activeModule === "activity" && (
+            <AccountsActivity currentUser={user} />
+          )}
+
         </div>
       </main>
     </div>

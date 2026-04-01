@@ -268,7 +268,7 @@ button { font-family: inherit; }
 
 .stat-card__value {
   font-family: 'Sora', sans-serif;
-  font-size: 24px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--color-text-primary);
   line-height: 1;
@@ -329,6 +329,7 @@ button { font-family: inherit; }
 
 .data-table {
   width: 100%;
+  top: 50;
   border-collapse: collapse;
 }
 
@@ -1506,7 +1507,8 @@ button { font-family: inherit; }
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 0;
+  margin-top: -10px;
+  margin-bottom: 10px;
 }
 
 .eload-filter-tab {

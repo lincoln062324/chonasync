@@ -45,6 +45,76 @@ export default function POS({
   // For entering mobile number per load item
   const [mobileInputs, setMobileInputs] = useState({}); // {cartIndex: number}
 
+  // ── Out-of-stock panel toggle ────────────────────────────────────────────────
+  const [showOos, setShowOos] = useState(false);
+
+  // ── Calculator state ─────────────────────────────────────────────────────────
+  const [showCalc,    setShowCalc]    = useState(false);
+  const [calcDisplay, setCalcDisplay] = useState("0");
+  const [calcExpr,    setCalcExpr]    = useState("");
+  const [calcHistory, setCalcHistory] = useState([]);
+  const [calcLoading, setCalcLoading] = useState(false);
+  const [calcTab,     setCalcTab]     = useState("calc"); // "calc" | "history"
+  const [calcError,   setCalcError]   = useState(false);
+
+  // Load history from Supabase when calculator opens
+  const openCalc = async () => {
+    setShowCalc(true);
+    setCalcTab("calc");
+    setCalcLoading(true);
+    try {
+      const { fetchCalcHistory } = await import("../lib/supabase.js");
+      const rows = await fetchCalcHistory();
+      setCalcHistory(rows);
+    } catch { /* silently ignore if table not set up yet */ }
+    setCalcLoading(false);
+  };
+
+  const calcInput = (val) => {
+    setCalcError(false);
+    if (val === "C") { setCalcDisplay("0"); setCalcExpr(""); return; }
+    if (val === "⌫") {
+      setCalcDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
+      return;
+    }
+    if (val === "=") {
+      try {
+        // Safe eval: only allow digits, operators, dots, parens, spaces
+        const sanitized = calcExpr.replace(/[^0-9+\-*/().% ]/g, "");
+        // eslint-disable-next-line no-new-func
+        const result = Function('"use strict"; return (' + sanitized + ')')();
+        if (!isFinite(result)) throw new Error("Not a number");
+        const resultStr = parseFloat(result.toFixed(10)).toString();
+        const entry = { expression: calcExpr, result: resultStr, date: new Date().toISOString() };
+        setCalcDisplay(resultStr);
+        setCalcExpr(resultStr);
+        // Save to Supabase (fire and forget)
+        import("../lib/supabase.js").then(({ saveCalcHistory }) => {
+          saveCalcHistory(entry).then(saved => {
+            setCalcHistory(prev => [saved, ...prev].slice(0, 50));
+          }).catch(() => {});
+        });
+      } catch {
+        setCalcDisplay("Error");
+        setCalcError(true);
+        setCalcExpr("");
+      }
+      return;
+    }
+    // Append digit/operator
+    const next = (calcExpr === "" || calcError) ? val : calcExpr + val;
+    setCalcExpr(next);
+    setCalcDisplay(next);
+    setCalcError(false);
+  };
+
+  const calcLoadHistory = (entry) => {
+    setCalcDisplay(entry.result);
+    setCalcExpr(entry.result);
+    setCalcTab("calc");
+    setCalcError(false);
+  };
+
   // ── Switch mode — clear search ──────────────────────────────────────────────
   const switchMode = (m) => { setMode(m); setSearch(""); };
 
@@ -58,17 +128,19 @@ export default function POS({
       ))
     : products.filter(p => p.stock > 0);
 
-  const addToCart = product => {
-    setCart(prev => {
-      const exists = prev.find(i => i.productId === product.id);
-      if (exists) {
-        return exists.qty >= product.stock
-          ? prev
-          : prev.map(i => i.productId === product.id ? { ...i, qty: i.qty + 1 } : i);
-      }
-      return [...prev, { productId: product.id, name: product.name, price: product.price, qty: 1 }];
-    });
-  };
+const addToCart = (product) => {
+  setCart(prev => {
+    const exists = prev.find(i => i.productId === product.id);
+    if (exists) {
+      return exists.qty >= product.stock
+        ? prev
+        : prev.map(i => i.productId === product.id ? { ...i, qty: i.qty + 1 } : i);
+    }
+    return [...prev, { productId: product.id, name: product.name, price: product.price, qty: 1 }];
+  });
+};
+
+const outOfStock = products.filter(p => p.stock === 0);
 
   const updateQty = (productId, qty) => {
     if (qty <= 0) { setCart(prev => prev.filter(i => i.productId !== productId)); return; }
@@ -207,9 +279,23 @@ export default function POS({
         {/* Header */}
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h1 className="page-header__title">Point of Sale</h1>
-          <Btn variant="secondary" icon="undo" onClick={() => setReturnModal(true)}>
-            Process Return
-          </Btn>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={openCalc}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 14px", borderRadius: 8, border: "1.5px solid #e2e8f0",
+                background: "#f8fafc", cursor: "pointer", fontSize: 13,
+                fontWeight: 600, color: "#374151", transition: "all 0.15s",
+              }}
+              title="Open Calculator"
+            >
+              🧮 Calculator
+            </button>
+            <Btn variant="secondary" icon="undo" onClick={() => setReturnModal(true)}>
+              Process Return
+            </Btn>
+          </div>
         </div>
 
         {/* Mode toggle tabs */}
@@ -238,6 +324,69 @@ export default function POS({
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+
+        {/* ── Out-of-Stock quick overview (products mode only) ── */}
+        {mode === "products" && outOfStock.length > 0 && (
+          <div style={{ marginBottom: 8 }}>
+            <button
+              onClick={() => setShowOos(v => !v)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "8px 12px", borderRadius: 8, border: "1.5px solid #fecaca",
+                background: showOos ? "#fef2f2" : "#fff5f5",
+                cursor: "pointer", transition: "background 0.15s",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 15 }}>🚫</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: "#dc2626" }}>
+                  {outOfStock.length} Out-of-Stock Item{outOfStock.length !== 1 ? "s" : ""}
+                </span>
+                <span style={{ fontSize: 12, color: "#ef4444", background: "#fee2e2",
+                  borderRadius: 20, padding: "1px 8px", fontWeight: 600 }}>
+                  Not available
+                </span>
+              </div>
+              <span style={{ fontSize: 12, color: "#dc2626", fontWeight: 600 }}>
+                {showOos ? "▲ Hide" : "▼ View"}
+              </span>
+            </button>
+
+            {showOos && (
+              <div style={{
+                border: "1.5px solid #fecaca", borderTop: "none",
+                borderRadius: "0 0 8px 8px", background: "#fff",
+                maxHeight: 220, overflowY: "auto",
+              }}>
+                {outOfStock.map((p, i) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "8px 12px",
+                      borderBottom: i < outOfStock.length - 1 ? "1px solid #fee2e2" : "none",
+                      background: i % 2 === 0 ? "#fff" : "#fff5f5",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
+                        {p.sku} · {p.category} · ₱{p.price}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: "#dc2626",
+                      background: "#fee2e2", borderRadius: 6, padding: "2px 8px",
+                      whiteSpace: "nowrap",
+                    }}>
+                      OUT OF STOCK
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── E-Load: network filter pills ── */}
         {mode === "eloading" && (
@@ -642,6 +791,133 @@ export default function POS({
               New Load Sale
             </Btn>
           </>
+        )}
+      </Modal>
+
+      {/* ══ Calculator Modal ══ */}
+      <Modal open={showCalc} onClose={() => setShowCalc(false)} title="🧮 Instant Calculator" maxWidth={360}>
+        {/* Tabs */}
+        <div style={{ display: "flex", borderBottom: "1.5px solid #e2e8f0", marginBottom: 12, gap: 0 }}>
+          {["calc", "history"].map(t => (
+            <button
+              key={t}
+              onClick={() => setCalcTab(t)}
+              style={{
+                flex: 1, padding: "8px 0", border: "none", background: "none",
+                fontWeight: 600, fontSize: 13, cursor: "pointer",
+                color: calcTab === t ? "#4f46e5" : "#94a3b8",
+                borderBottom: calcTab === t ? "2.5px solid #4f46e5" : "2.5px solid transparent",
+                transition: "all 0.15s",
+              }}
+            >
+              {t === "calc" ? "Calculator" : "History"}
+            </button>
+          ))}
+        </div>
+
+        {calcTab === "calc" && (
+          <div>
+            {/* Display */}
+            <div style={{
+              background: calcError ? "#fef2f2" : "#0f172a",
+              borderRadius: 10, padding: "14px 16px", marginBottom: 10, minHeight: 70,
+              display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "flex-end",
+            }}>
+              <div style={{ fontSize: 11, color: "#64748b", minHeight: 16, wordBreak: "break-all" }}>
+                {calcExpr !== calcDisplay && !calcError ? calcExpr : ""}
+              </div>
+              <div style={{
+                fontSize: calcDisplay.length > 14 ? 18 : 28,
+                fontWeight: 800, color: calcError ? "#dc2626" : "#f8fafc",
+                wordBreak: "break-all", textAlign: "right", letterSpacing: "-0.5px",
+              }}>
+                {calcDisplay}
+              </div>
+            </div>
+
+            {/* Buttons */}
+            {[
+              ["C", "⌫", "%",  "÷"],
+              ["7", "8", "9",  "×"],
+              ["4", "5", "6",  "−"],
+              ["1", "2", "3",  "+"],
+              ["00","0", ".", "="],
+            ].map((row, ri) => (
+              <div key={ri} style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6, marginBottom: 6 }}>
+                {row.map(key => {
+                  const isOp   = ["÷","×","−","+"].includes(key);
+                  const isEq   = key === "=";
+                  const isClear= key === "C";
+                  const isDel  = key === "⌫";
+                  // Map display chars to actual operators
+                  const send = key === "÷" ? "/" : key === "×" ? "*" : key === "−" ? "-" : key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => calcInput(send === "=" ? "=" : send === "C" ? "C" : send === "⌫" ? "⌫" : send)}
+                      style={{
+                        padding: "14px 0", borderRadius: 8, border: "1.5px solid",
+                        fontSize: 16, fontWeight: 700, cursor: "pointer", transition: "all 0.1s",
+                        background: isEq   ? "#4f46e5"
+                                  : isOp   ? "#eef2ff"
+                                  : isClear? "#fef2f2"
+                                  : isDel  ? "#fff7ed"
+                                  : "#f8fafc",
+                        borderColor: isEq   ? "#4338ca"
+                                   : isOp   ? "#c7d2fe"
+                                   : isClear? "#fecaca"
+                                   : isDel  ? "#fed7aa"
+                                   : "#e2e8f0",
+                        color: isEq    ? "#fff"
+                             : isOp    ? "#4f46e5"
+                             : isClear ? "#dc2626"
+                             : isDel   ? "#c2410c"
+                             : "#0f172a",
+                      }}
+                    >
+                      {key}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {calcTab === "history" && (
+          <div>
+            {calcLoading ? (
+              <div style={{ textAlign: "center", padding: 32, color: "#94a3b8", fontSize: 13 }}>Loading history…</div>
+            ) : calcHistory.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 32, color: "#94a3b8" }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🧮</div>
+                <div style={{ fontSize: 13 }}>No calculations yet.</div>
+              </div>
+            ) : (
+              <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                {calcHistory.map((h, i) => (
+                  <button
+                    key={h.id ?? i}
+                    onClick={() => calcLoadHistory(h)}
+                    style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "10px 12px", borderRadius: 8, border: "1.5px solid #e2e8f0",
+                      background: "#f8fafc", cursor: "pointer", textAlign: "left",
+                      transition: "background 0.1s",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 2 }}>{h.expression}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>= {h.result}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0, marginLeft: 8 }}>
+                      {new Date(h.date).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </Modal>
 

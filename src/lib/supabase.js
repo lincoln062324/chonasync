@@ -465,3 +465,174 @@ export async function updatePurchaseOrderStatus(id, status) {
     .eq("id", id);
   if (error) throw error;
 }
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  ACCOUNTS (PIN-based users)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const AVATAR_COLORS = [
+  "#4f46e5","#059669","#dc2626","#d97706","#7c3aed",
+  "#0891b2","#c2410c","#065f46","#1d4ed8","#9333ea",
+];
+
+const mapAccount = (row) => ({
+  id:          row.id,
+  name:        row.name,
+  role:        row.role,
+  avatarColor: row.avatar_color ?? AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
+  createdAt:   row.created_at,
+  isActive:    row.is_active ?? true,
+});
+
+export async function fetchAccounts() {
+  const { data, error } = await supabase
+    .from("accounts")
+    .select("id, name, role, avatar_color, created_at, is_active")
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data.map(mapAccount);
+}
+
+export async function loginWithPin(pin) {
+  // Hash the PIN client-side with a simple approach:
+  // We store a bcrypt-like hash in DB, but for simplicity we use
+  // a SHA-256 digest via SubtleCrypto (available in all modern browsers).
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pin);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
+  const pinHash    = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+  const { data: rows, error } = await supabase
+    .from("accounts")
+    .select("id, name, role, avatar_color, is_active")
+    .eq("pin_hash", pinHash)
+    .eq("is_active", true)
+    .limit(1);
+
+  if (error) throw error;
+  if (!rows || rows.length === 0) return null;
+
+  // Update last_login timestamp
+  await supabase
+    .from("accounts")
+    .update({ last_login: new Date().toISOString() })
+    .eq("id", rows[0].id);
+
+  return mapAccount(rows[0]);
+}
+
+export async function createAccount(account) {
+  // Hash PIN
+  const encoder = new TextEncoder();
+  const data = encoder.encode(account.pin);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
+  const pinHash    = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+  const { data: row, error } = await supabase
+    .from("accounts")
+    .insert({
+      name:         account.name,
+      role:         account.role ?? "cashier",
+      pin_hash:     pinHash,
+      avatar_color: account.avatarColor ?? "#4f46e5",
+      is_active:    true,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapAccount(row);
+}
+
+export async function updateAccountPin(accountId, newPin) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(newPin);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
+  const pinHash    = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
+  const { error } = await supabase
+    .from("accounts")
+    .update({ pin_hash: pinHash })
+    .eq("id", accountId);
+  if (error) throw error;
+}
+
+export async function deactivateAccount(accountId) {
+  const { error } = await supabase
+    .from("accounts")
+    .update({ is_active: false })
+    .eq("id", accountId);
+  if (error) throw error;
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  AUDIT LOGS & ACTIVITY HISTORY
+// ══════════════════════════════════════════════════════════════════════════════
+
+const mapLog = (row) => ({
+  id:        row.id,
+  accountId: row.account_id,
+  userName:  row.accounts?.name ?? "Unknown",
+  userRole:  row.accounts?.role ?? "",
+  action:    row.action,
+  detail:    row.detail ?? "",
+  createdAt: row.created_at,
+});
+
+export async function logActivity(accountId, action, detail = "") {
+  const { error } = await supabase
+    .from("audit_logs")
+    .insert({ account_id: accountId, action, detail });
+  if (error) console.warn("audit log failed:", error.message);
+}
+
+export async function fetchAuditLogs({ accountId, limit = 100 } = {}) {
+  let query = supabase
+    .from("audit_logs")
+    .select("*, accounts(name, role)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (accountId) query = query.eq("account_id", accountId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.map(mapLog);
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CALCULATOR HISTORY
+// ══════════════════════════════════════════════════════════════════════════════
+
+const mapCalcEntry = (row) => ({
+  id:         row.id,
+  expression: row.expression,
+  result:     row.result,
+  date:       row.created_at,
+});
+
+export async function fetchCalcHistory() {
+  const { data, error } = await supabase
+    .from("calculator_history")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data.map(mapCalcEntry);
+}
+
+export async function saveCalcHistory(entry) {
+  const { data, error } = await supabase
+    .from("calculator_history")
+    .insert({ expression: entry.expression, result: entry.result })
+    .select()
+    .single();
+  if (error) throw error;
+  return mapCalcEntry(data);
+}

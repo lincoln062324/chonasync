@@ -44,7 +44,9 @@ export const CATEGORIES = [
   "Personal Care",
   "Dairy",
   "Condiments",
-  "Cigarettes",   // ← added
+  "Cigarettes",
+  "Hygiene",
+  "Groceries",
   "Other",
 ];
 
@@ -54,24 +56,23 @@ export const CATEGORY_META = {
   "Snacks":          { emoji: "🍟", color: "#92400e", bg: "#fef3c7", border: "#fde68a" },
   "Canned/Dry Goods":{ emoji: "🥫", color: "#065f46", bg: "#ecfdf5", border: "#a7f3d0" },
   "Household":       { emoji: "🏠", color: "#6d28d9", bg: "#f5f3ff", border: "#ddd6fe" },
-  "Personal Care":   { emoji: "🧴", color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
   "Dairy":           { emoji: "🧀", color: "#c2410c", bg: "#fff7ed", border: "#fed7aa" },
   "Condiments":      { emoji: "🍶", color: "#4f46e5", bg: "#eef2ff", border: "#c7d2fe" },
   "Cigarettes":      { emoji: "🚬", color: "#475569", bg: "#f8fafc", border: "#cbd5e1" },
+  "Hygiene":         { emoji: "🧴", color: "#0f766e", bg: "#f0fdfa", border: "#99f6e4" },
+  "Groceries":       { emoji: "🛒", color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0" },
   "Other":           { emoji: "📦", color: "#374151", bg: "#f9fafb", border: "#e5e7eb" },
 };
 
-// Add this to your existing constants.js — replace the NAV_ITEMS export
-
 export const NAV_ITEMS = [
-  { id: "dashboard",    label: "Dashboard",     icon: "dashboard" },
-  { id: "stock",        label: "Stock",          icon: "box"       },
-  { id: "pos",          label: "POS",            icon: "pos"       },
-  { id: "eloading",     label: "E-Loading",      icon: "pos"       },
-  { id: "saleshistory", label: "Sales History",  icon: "chart"     },  // ← NEW
-  { id: "purchasing",   label: "Purchasing",     icon: "truck"     },
-  { id: "suppliers",    label: "Suppliers",      icon: "users"     },
-  { id: "alerts",       label: "Alerts",         icon: "bell"      },
-  { id: "reports",      label: "Reports",        icon: "chart"     },
+  { id: "dashboard",  label: "Dashboard",      icon: "dashboard" },
+  { id: "pos",        label: "POS",             icon: "pos"       },
+  { id: "stock",      label: "Stock",           icon: "box"       },
+  { id: "eloading",   label: "E-Loading",       icon: "pos"       },
+  { id: "saleshistory",label: "Sales History",  icon: "chart"     },
+  { id: "purchasing", label: "Purchasing",      icon: "truck"     },
+  { id: "suppliers",  label: "Suppliers",       icon: "users"     },
+  { id: "alerts",     label: "Alerts",          icon: "bell"      },
+  { id: "reports",    label: "Reports",         icon: "chart"     },
+  { id: "activity",   label: "Accounts & Activity", emoji: "🔐"  },
 ];
-
