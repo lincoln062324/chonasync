@@ -74,5 +74,6 @@ export const NAV_ITEMS = [
   { id: "suppliers",  label: "Suppliers",       icon: "users"     },
   { id: "alerts",     label: "Alerts",          icon: "bell"      },
   { id: "reports",    label: "Reports",         icon: "chart"     },
-  { id: "activity",   label: "Accounts & Activity", emoji: "🔐"  },
+  { id: "activity",   label: "Accounts & Activity", icon: "lock"  },
+  { id: "bottle-deposit", label: "Bottle Deposits",     icon: "bottle"  },
 ];

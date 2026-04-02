@@ -2,6 +2,12 @@ import { useState } from "react";
 import Icon from "../Components/Icon";
 import { Btn, Modal, Field } from "../Components/Primitives";
 import { TAX_RATE } from "../data/constants";
+import { createBottleDeposit } from "../Components/BottleDeposit";
+
+// ─── Beverage keywords that can have bottle deposits ─────────────────────────
+const BEVERAGE_KEYWORDS = ["coke","sprite","royal","rc","lemon","sarsi","pepsi","mirinda","mountain dew","c2","gulaman","soda"];
+const isBeverageWithDeposit = (name) =>
+  BEVERAGE_KEYWORDS.some(kw => name.toLowerCase().includes(kw));
 
 const NETWORK_COLORS = {
   Globe:  { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8", dot: "#3b82f6" },
@@ -44,6 +50,12 @@ export default function POS({
   const [eloadDiscount,setEloadDiscount]= useState(0);
   // For entering mobile number per load item
   const [mobileInputs, setMobileInputs] = useState({}); // {cartIndex: number}
+
+  // ── Bottle deposit state per cart item ─────────────────────────────────────────
+  const [depositMap,      setDepositMap]      = useState({}); // {productId: {hasDeposit, depositAmt, customerName, contact}}
+  const [depositModal,    setDepositModal]    = useState(null); // productId | null
+  const [depositForm,     setDepositForm]     = useState({ hasDeposit: false, depositAmt: 10, customerName: "", contact: "" });
+  const [savingDeposit,   setSavingDeposit]   = useState(false);
 
   // ── Out-of-stock panel toggle ────────────────────────────────────────────────
   const [showOos, setShowOos] = useState(false);
@@ -138,7 +150,33 @@ const addToCart = (product) => {
     }
     return [...prev, { productId: product.id, name: product.name, price: product.price, qty: 1 }];
   });
+  // Auto-open deposit prompt for beverages
+  if (isBeverageWithDeposit(product.name) && !depositMap[product.id]) {
+    setDepositForm({ hasDeposit: false, depositAmt: 10, customerName: "", contact: "" });
+    setDepositModal(product.id);
+  }
 };
+
+// Save deposit decision
+const saveDepositDecision = () => {
+  setDepositMap(prev => ({ ...prev, [depositModal]: { ...depositForm } }));
+  setDepositModal(null);
+};
+
+// Remove deposit decision when item removed
+const removeFromCart = (productId) => {
+  setCart(prev => prev.filter(i => i.productId !== productId));
+  setDepositMap(prev => { const n = { ...prev }; delete n[productId]; return n; });
+};
+
+// Total deposit amount from cart
+const totalDepositAmount = Object.values(depositMap)
+  .filter(d => d.hasDeposit)
+  .reduce((s, d) => {
+    const cartItem = cart.find(i => depositMap[i.productId] === d);
+    const qty = cartItem?.qty || 1;
+    return s + +d.depositAmt * qty;
+  }, 0);
 
 const outOfStock = products.filter(p => p.stock === 0);
 
@@ -156,14 +194,55 @@ const outOfStock = products.filter(p => p.stock === 0);
 
   const checkout = async () => {
     if (!payment || +payment < total) { alert("Insufficient payment amount."); return; }
+
+    // Collect deposit records to save
+    const depositRecords = cart
+      .filter(i => depositMap[i.productId]?.hasDeposit && depositMap[i.productId]?.customerName)
+      .map(i => {
+        const d = depositMap[i.productId];
+        return {
+          customerName: d.customerName,
+          contact: d.contact,
+          bottleType: i.name.split(" ")[0], // "Coke", "Sprite" etc
+          bottleSize: i.name.includes("1.5") ? "1.5L (big)" : "small",
+          qty: i.qty,
+          depositPerBottle: +d.depositAmt,
+          dateBorrowed: new Date().toISOString().slice(0, 10),
+          notes: "From POS transaction",
+        };
+      });
+
+    const depositTotal = cart.reduce((s, i) => {
+      const d = depositMap[i.productId];
+      if (!d?.hasDeposit) return s;
+      return s + +d.depositAmt * i.qty;
+    }, 0);
+
     const txn = {
       id: "t" + Date.now(),
       date: new Date().toISOString().slice(0, 10),
-      items: cart.map(i => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price })),
+      items: cart.map(i => {
+        const d = depositMap[i.productId];
+        return {
+          productId: i.productId,
+          name: i.name,
+          qty: i.qty,
+          price: i.price,
+          hasDeposit: d?.hasDeposit || false,
+          depositAmt: d?.hasDeposit ? +d.depositAmt : 0,
+          depositCustomer: d?.hasDeposit ? d.customerName : null,
+        };
+      }),
       subtotal, tax, discount: +discount, total, payment: +payment, change, method: "cash",
+      depositTotal,
     };
 
     const savedTxn = onCheckout ? await onCheckout(txn) : txn;
+
+    // Save deposit records to Supabase
+    for (const rec of depositRecords) {
+      try { await createBottleDeposit(rec); } catch (e) { console.warn("Deposit save failed:", e.message); }
+    }
 
     if (!onCheckout) {
       setTransactions(prev => [txn, ...prev]);
@@ -177,6 +256,7 @@ const outOfStock = products.filter(p => p.stock === 0);
 
     setReceipt(savedTxn || txn);
     setCart([]);
+    setDepositMap({});
     setDiscount(0);
     setPayment("");
   };
@@ -499,6 +579,26 @@ const outOfStock = products.filter(p => p.stock === 0);
                     <div className="cart-item__info">
                       <div className="cart-item__name">{item.name}</div>
                       <div className="cart-item__unit">₱{item.price} each</div>
+                    {/* Deposit badge */}
+                    {isBeverageWithDeposit(item.name) && (
+                      <button
+                        onClick={() => {
+                          setDepositForm(depositMap[item.productId] || { hasDeposit: false, depositAmt: 10, customerName: "", contact: "" });
+                          setDepositModal(item.productId);
+                        }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          marginTop: 3, padding: "2px 7px", borderRadius: 6, border: "none",
+                          fontSize: 10, fontWeight: 700, cursor: "pointer",
+                          background: depositMap[item.productId]?.hasDeposit ? "#fffbeb" : "#f8fafc",
+                          color: depositMap[item.productId]?.hasDeposit ? "#d97706" : "#94a3b8",
+                        }}
+                      >
+                        🍾 {depositMap[item.productId]?.hasDeposit
+                          ? `Deposit: ₱${depositMap[item.productId].depositAmt} · ${depositMap[item.productId].customerName || "?"}`
+                          : "No deposit (tap to set)"}
+                      </button>
+                    )}
                     </div>
                     <div className="cart-item__controls">
                       <button className="qty-btn" onClick={() => updateQty(item.productId, item.qty - 1)}>−</button>
@@ -507,7 +607,7 @@ const outOfStock = products.filter(p => p.stock === 0);
                       <span className="cart-item__subtotal">₱{(item.price * item.qty).toFixed(2)}</span>
                       <button
                         className="cart-item__remove"
-                        onClick={() => setCart(prev => prev.filter(i => i.productId !== item.productId))}
+                        onClick={() => removeFromCart(item.productId)}
                       >
                         <Icon name="x" size={14} />
                       </button>
@@ -537,6 +637,16 @@ const outOfStock = products.filter(p => p.stock === 0);
                   onChange={e => setDiscount(e.target.value)}
                 />
               </div>
+              {Object.values(depositMap).some(d => d.hasDeposit) && (
+                <div className="checkout-row" style={{ background: "#fffbeb", borderRadius: 6, padding: "6px 8px", border: "1px solid #fde68a", marginBottom: 4 }}>
+                  <span style={{ color: "#92400e", fontWeight: 600, fontSize: 12 }}>🍾 Bottle Deposits</span>
+                  <span style={{ color: "#d97706", fontWeight: 700 }}>+₱{Object.entries(depositMap).reduce((s,[pid,d])=>{
+                    if (!d.hasDeposit) return s;
+                    const qty = cart.find(i=>i.productId===pid)?.qty||1;
+                    return s + +d.depositAmt*qty;
+                  }, 0).toFixed(2)}</span>
+                </div>
+              )}
               <div className="checkout-total">
                 <span>TOTAL</span>
                 <span className="checkout-total__amount">₱{total.toFixed(2)}</span>
@@ -696,6 +806,93 @@ const outOfStock = products.filter(p => p.stock === 0);
         )}
       </div>
 
+      {/* ══ Bottle Deposit Prompt Modal ══ */}
+      <Modal
+        open={!!depositModal}
+        onClose={() => setDepositModal(null)}
+        title="🍾 Bottle Deposit"
+        maxWidth={440}
+      >
+        {depositModal && (
+          <>
+            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16 }}>
+              Does this customer have a bottle deposit for <strong>{cart.find(i => i.productId === depositModal)?.name}</strong>?
+            </p>
+
+            {/* Yes / No toggle */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+              {[{ val: true, label: "🍾 Has Deposit", bg: "#fffbeb", border: "#fde68a", color: "#92400e" },
+                { val: false, label: "✅ No Deposit", bg: "#f0fdf4", border: "#a7f3d0", color: "#065f46" }
+              ].map(opt => (
+                <button
+                  key={String(opt.val)}
+                  onClick={() => setDepositForm(p => ({ ...p, hasDeposit: opt.val }))}
+                  style={{
+                    padding: "12px 0", borderRadius: 10, border: "2px solid",
+                    cursor: "pointer", fontWeight: 700, fontSize: 14, transition: "all 0.15s",
+                    background: depositForm.hasDeposit === opt.val ? opt.bg : "#f8fafc",
+                    borderColor: depositForm.hasDeposit === opt.val ? opt.border : "#e2e8f0",
+                    color: depositForm.hasDeposit === opt.val ? opt.color : "#94a3b8",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {depositForm.hasDeposit && (
+              <div className="form-grid-2">
+                <Field label="Deposit per Bottle (₱)">
+                  <input
+                    className="input"
+                    type="number"
+                    min={0}
+                    step="0.50"
+                    value={depositForm.depositAmt}
+                    onChange={e => setDepositForm(p => ({ ...p, depositAmt: e.target.value }))}
+                    autoFocus
+                  />
+                </Field>
+                <Field label="Customer Name">
+                  <input
+                    className="input"
+                    value={depositForm.customerName}
+                    onChange={e => setDepositForm(p => ({ ...p, customerName: e.target.value }))}
+                    placeholder="Name of borrower"
+                  />
+                </Field>
+                <Field label="Contact (optional)" >
+                  <input
+                    className="input"
+                    value={depositForm.contact}
+                    onChange={e => setDepositForm(p => ({ ...p, contact: e.target.value }))}
+                    placeholder="09XXXXXXXXX"
+                  />
+                </Field>
+                <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 16 }}>
+                  <div style={{
+                    background: "#fffbeb", border: "1.5px solid #fde68a",
+                    borderRadius: 8, padding: "8px 12px", width: "100%",
+                  }}>
+                    <div style={{ fontSize: 10, color: "#92400e", fontWeight: 700, textTransform: "uppercase" }}>Deposit Amount</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#d97706", fontFamily: "'Sora', sans-serif" }}>
+                      ₱{(+depositForm.depositAmt * (cart.find(i => i.productId === depositModal)?.qty || 1)).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="modal__footer">
+              <Btn variant="secondary" onClick={() => setDepositModal(null)}>Skip</Btn>
+              <Btn onClick={saveDepositDecision}>
+                {depositForm.hasDeposit ? "Save Deposit Info" : "Confirm — No Deposit"}
+              </Btn>
+            </div>
+          </>
+        )}
+      </Modal>
+
       {/* ══ Product Receipt Modal ══ */}
       <Modal open={!!receipt} onClose={() => setReceipt(null)} title="Transaction Complete">
         {receipt && (
@@ -707,9 +904,17 @@ const outOfStock = products.filter(p => p.stock === 0);
             </div>
             <div className="receipt-items">
               {receipt.items.map((item, i) => (
-                <div key={i} className="receipt-item-row">
-                  <span>{item.name} × {item.qty}</span>
-                  <span>₱{(item.price * item.qty).toFixed(2)}</span>
+                <div key={i} style={{ borderBottom: "1px solid var(--color-border)", paddingBottom: 6, marginBottom: 6 }}>
+                  <div className="receipt-item-row" style={{ borderBottom: "none", paddingBottom: 0, marginBottom: 0 }}>
+                    <span>{item.name} × {item.qty}</span>
+                    <span>₱{(item.price * item.qty).toFixed(2)}</span>
+                  </div>
+                  {item.hasDeposit && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#d97706", marginTop: 2 }}>
+                      <span>🍾 Bottle deposit ({item.depositCustomer}) × {item.qty}</span>
+                      <span>₱{(+item.depositAmt * item.qty).toFixed(2)}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

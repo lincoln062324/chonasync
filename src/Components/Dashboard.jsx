@@ -4,7 +4,7 @@ import { StatCard } from "../Components/Primitives";
 const fmt = (n) =>
   `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function Dashboard({ products, transactions, purchaseOrders, suppliers, setActiveModule }) {
+export default function Dashboard({ products, transactions, purchaseOrders, suppliers, setActiveModule, bottleDeposits = [] }) {
   const totalValue   = products.reduce((s, p) => s + p.stock * p.cost, 0);
   const lowStock     = products.filter(p => p.stock > 0 && p.stock <= p.reorderLevel).length;
   const outOfStock   = products.filter(p => p.stock === 0).length;
@@ -31,6 +31,12 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
   ].slice(0, 6);
 
   const recentProductTxns = productTxns.slice(0, 5);
+
+  // ── Bottle deposit stats ──────────────────────────────────────────────────
+  const activeDeposits   = bottleDeposits.filter(d => d.status !== "returned");
+  const totalDepositAmt  = activeDeposits.reduce((s, d) => s + ((d.qty - d.returned_qty) * +d.deposit_per_bottle), 0);
+  const totalBottlesOut  = activeDeposits.reduce((s, d) => s + (d.qty - d.returned_qty), 0);
+  const recentDeposits   = activeDeposits.slice(0, 4);
   const recentEloadTxns   = eloadTxns.slice(0, 5);
 
   return (
@@ -105,6 +111,17 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
           <div>
             <div className="stat-card__value">{suppliers.length}</div>
             <div className="stat-card__label">Suppliers</div>
+          </div>
+        </div>
+
+        <div className="stat-card stat-card--clickable" onClick={() => setActiveModule("bottle-deposit")}>
+          <div className="stat-card__icon" style={{ background:"#fffbeb", color:"#d97706" }}>
+            <span style={{ fontSize: 22 }}>🍾</span>
+          </div>
+          <div>
+            <div className="stat-card__value">{totalBottlesOut}</div>
+            <div className="stat-card__label">Bottles Out</div>
+            <div className="stat-card__sub">{fmt(totalDepositAmt)} deposits held</div>
           </div>
         </div>
 
@@ -201,6 +218,53 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
           })}
         </div>
       </div>
+
+      {/* ── Bottle Deposits Overview ── */}
+      {activeDeposits.length > 0 && (
+        <div className="card card--padded dash-section-card" style={{ marginTop: 16, cursor: "pointer" }}
+          onClick={() => setActiveModule("bottle-deposit")}>
+          <h3 className="card__title">
+            🍾 Active Bottle Deposits
+            <span className="dash-see-all">Manage all →</span>
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 14 }}>
+            {[
+              { label: "Bottles Out",    value: totalBottlesOut,               color: "#dc2626", bg: "#fef2f2" },
+              { label: "Customers",      value: activeDeposits.length,         color: "#d97706", bg: "#fffbeb" },
+              { label: "Deposits Held",  value: fmt(totalDepositAmt),          color: "#059669", bg: "#ecfdf5" },
+            ].map(s => (
+              <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: s.color, fontFamily: "'Sora',sans-serif" }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {recentDeposits.map((d, i) => (
+            <div key={d.id} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "8px 0", borderBottom: i < recentDeposits.length - 1 ? "1px solid var(--color-border-soft)" : "none",
+            }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{d.customer_name}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 1 }}>
+                  🍾 {d.bottle_type} {d.bottle_size} · {d.qty - d.returned_qty} bottle{d.qty - d.returned_qty !== 1 ? "s" : ""} out
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#d97706" }}>
+                  {fmt((d.qty - d.returned_qty) * +d.deposit_per_bottle)}
+                </div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>{d.date_borrowed}</div>
+              </div>
+            </div>
+          ))}
+          {activeDeposits.length > 4 && (
+            <div style={{ fontSize: 12, color: "var(--color-indigo)", fontWeight: 600, marginTop: 8, textAlign: "center" }}>
+              +{activeDeposits.length - 4} more — click to view all
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,8 @@ import StockAlerts          from "./Components/StockAlerts";
 import Reports              from "./Components/Reports";
 import SalesHistory         from "./Components/SalesHistory";
 import AccountsActivity     from "./Components/AccountsActivity";
+import BottleDeposit        from "./Components/BottleDeposit";
+import { fetchBottleDeposits } from "./Components/BottleDeposit";
 
 export default function App() {
   const { user, login, logout } = useAuth();
@@ -34,25 +36,28 @@ export default function App() {
   const [transactions,   setTransactions]   = useState([]);
   const [loadProducts,   setLoadProducts]   = useState([]);
   const [activeModule,   setActiveModule]   = useState("dashboard");
+  const [bottleDeposits, setBottleDeposits] = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [dbError,        setDbError]        = useState(null);
 
   useEffect(() => {
     async function bootstrap() {
       try {
-        const [prods, sups, txns, eloadTxns, lps, pos] = await Promise.all([
+        const [prods, sups, txns, eloadTxns, lps, pos, deposits] = await Promise.all([
           fetchProducts(),
           fetchSuppliers(),
           fetchTransactions(),
           fetchEloadTransactions(),
           fetchLoadProducts(),
           fetchPurchaseOrders(),
+          fetchBottleDeposits().catch(() => []),
         ]);
         setProducts(prods);
         setSuppliers(sups);
         setTransactions([...txns, ...eloadTxns].sort((a, b) => b.id.localeCompare(a.id)));
         setLoadProducts(lps);
         setPurchaseOrders(pos);
+        setBottleDeposits(deposits);
       } catch (err) {
         console.error("Supabase bootstrap error:", err);
         setDbError(err.message);
@@ -152,6 +157,7 @@ export default function App() {
               products={products} transactions={transactions}
               purchaseOrders={purchaseOrders} suppliers={suppliers}
               setActiveModule={navigate}
+              bottleDeposits={bottleDeposits}
             />
           )}
 
@@ -230,6 +236,14 @@ export default function App() {
           {/* ── Accounts & Activity ── */}
           {activeModule === "activity" && (
             <AccountsActivity currentUser={user} />
+          )}
+
+          {/* ── Bottle Deposit Tracker ── */}
+          {activeModule === "bottle-deposit" && (
+            <BottleDeposit
+              deposits={bottleDeposits}
+              setDeposits={setBottleDeposits}
+            />
           )}
 
         </div>
