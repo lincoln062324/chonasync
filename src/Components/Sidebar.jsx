@@ -10,36 +10,129 @@ const ROLE_COLORS = {
 };
 
 // ── Mobile Top Bar (hidden on desktop via CSS) ─────────────────
-function MobileTopBar({ onOpen, isOpen, lowStockCount }) {
+function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogout }) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const roleStyle = ROLE_COLORS[user?.role?.toLowerCase()] ?? { bg: "#f1f5f9", color: "#475569" };
+
   return (
-    <div className="mobile-topbar">
-      <button
-        className={`hamburger-btn${isOpen ? " hamburger-btn--open" : ""}`}
-        onClick={onOpen}
-        aria-label="Toggle navigation"
-      >
-        <span />
-        <span />
-        <span />
-      </button>
+    <>
+      <div className="mobile-topbar">
+        {/* Hamburger */}
+        <button
+          className={`hamburger-btn${isOpen ? " hamburger-btn--open" : ""}`}
+          onClick={onOpen}
+          aria-label="Toggle navigation"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
 
-      <div className="mobile-topbar__brand">
-        📦 <span>ChonaSync</span>
+        {/* Brand */}
+        <div className="mobile-topbar__brand">
+          📦 <span>ChonaSync</span>
+        </div>
+
+        {/* Right action buttons */}
+        <div className="mobile-topbar__actions">
+          {/* Bell / Alerts shortcut */}
+          <button
+            className="mobile-topbar__icon-btn"
+            onClick={() => onNavigate("alerts")}
+            aria-label="Stock Alerts"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {lowStockCount > 0 && (
+              <span className="mobile-topbar__badge">{lowStockCount > 9 ? "9+" : lowStockCount}</span>
+            )}
+          </button>
+
+          {/* Profile avatar button */}
+          <button
+            className="mobile-topbar__avatar-btn"
+            onClick={() => setProfileOpen(v => !v)}
+            aria-label="Profile menu"
+          >
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user?.name}
+                className="mobile-topbar__avatar-img"
+                onError={e => { e.currentTarget.style.display = "none"; }}
+              />
+            ) : (
+              <div
+                className="mobile-topbar__avatar-fallback"
+                style={{ background: user?.avatarColor || "#4f46e5" }}
+              >
+                {user?.name?.charAt(0).toUpperCase() || "U"}
+              </div>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {lowStockCount > 0 && (
-          <span style={{
-            background: "#dc2626", color: "#fff",
-            borderRadius: 99, fontSize: 10, fontWeight: 700,
-            padding: "2px 7px", minWidth: 20, textAlign: "center",
-          }}>
-            {lowStockCount}
-          </span>
-        )}
-        <div style={{ width: 36 }} />
-      </div>
-    </div>
+      {/* Profile dropdown */}
+      {profileOpen && (
+        <>
+          <div
+            className="mobile-profile-overlay"
+            onClick={() => setProfileOpen(false)}
+          />
+          <div className="mobile-profile-dropdown">
+            {/* User info */}
+            <div className="mobile-profile-dropdown__user">
+              <div
+                className="mobile-profile-dropdown__avatar"
+                style={{ background: user?.avatarColor || "#4f46e5" }}
+              >
+                {user?.name?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <div>
+                <div className="mobile-profile-dropdown__name">{user?.name || "User"}</div>
+                <span
+                  className="mobile-profile-dropdown__role"
+                  style={{ background: roleStyle.bg, color: roleStyle.color }}
+                >
+                  {user?.role || "staff"}
+                </span>
+              </div>
+            </div>
+
+            <div className="mobile-profile-dropdown__divider" />
+
+            {/* Quick nav shortcuts */}
+            {[
+              { id: "dashboard",  label: "Dashboard",   emoji: "🏠" },
+              { id: "pos",        label: "POS",          emoji: "🧾" },
+              { id: "stock",      label: "Stock",        emoji: "📦" },
+              { id: "activity",   label: "My Account",   emoji: "🔐" },
+            ].map(item => (
+              <button
+                key={item.id}
+                className="mobile-profile-dropdown__item"
+                onClick={() => { onNavigate(item.id); setProfileOpen(false); }}
+              >
+                <span>{item.emoji}</span>
+                {item.label}
+              </button>
+            ))}
+
+            <div className="mobile-profile-dropdown__divider" />
+
+            {/* Sign out */}
+            <button
+              className="mobile-profile-dropdown__item mobile-profile-dropdown__item--danger"
+              onClick={() => { setProfileOpen(false); onLogout(); }}
+            >
+              <span>🚪</span> Sign Out
+            </button>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
@@ -78,6 +171,9 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
         onOpen={() => setMobileOpen(v => !v)}
         isOpen={mobileOpen}
         lowStockCount={lowStockCount}
+        user={user}
+        onNavigate={handleNav}
+        onLogout={onLogout}
       />
 
       {/* Overlay */}

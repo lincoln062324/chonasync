@@ -221,7 +221,7 @@ export default function StockManagement({
           </div>
         )}
 
-        {/* Table */}
+        {/* Table — hidden on mobile via CSS, replaced by cards below */}
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -280,6 +280,77 @@ export default function StockManagement({
             </div>
           )}
         </div>
+
+        {/* Mobile card grid — visible only on phones (≤640px) via CSS */}
+        {filtered.length === 0 ? (
+          <div className="stock-card-empty">
+            {catFilter !== "All"
+              ? `No products in "${catFilter}" yet. Tap "Add Product" to add one.`
+              : "No products found."}
+          </div>
+        ) : (
+          <div className="stock-card-grid">
+            {filtered.map(p => {
+              const st   = stockStatus(p);
+              const meta = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
+              return (
+                <div key={p.id + "-card"} className="stock-card">
+                  {/* Top: name + status badge */}
+                  <div className="stock-card__top">
+                    <div>
+                      <div className="stock-card__name">{p.name}</div>
+                      <div className="stock-card__sku">{p.sku} · {p.unit}</div>
+                    </div>
+                    <Badge color={st.color}>{st.label}</Badge>
+                  </div>
+
+                  {/* Category pill */}
+                  <div className="stock-card__meta">
+                    <span
+                      className="cat-pill"
+                      style={{ background: meta.bg, border: `1px solid ${meta.border}`, color: meta.color }}
+                    >
+                      {meta.emoji} {p.category}
+                    </span>
+                    <div className="stock-card__prices">
+                      <span>Cost: <span className="stock-card__price-val">₱{p.cost}</span></span>
+                      <span>Price: <span className="stock-card__price-val">₱{p.price}</span></span>
+                    </div>
+                  </div>
+
+                  {/* Stock stats row */}
+                  <div className="stock-card__stats">
+                    <div className="stock-card__stat">
+                      <div className="stock-card__stat-val">{p.stock}</div>
+                      <div className="stock-card__stat-label">Available</div>
+                    </div>
+                    <div className="stock-card__stat">
+                      <div className="stock-card__stat-val stock-card__stat-val--reserved">{p.reserved}</div>
+                      <div className="stock-card__stat-label">Reserved</div>
+                    </div>
+                    <div className="stock-card__stat">
+                      <div className="stock-card__stat-val stock-card__stat-val--damaged">{p.damaged}</div>
+                      <div className="stock-card__stat-label">Damaged</div>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="stock-card__actions">
+                    <Btn size="sm" variant="secondary" onClick={() => openAdj(p)}>
+                      <Icon name="refresh" size={12} /> Adjust
+                    </Btn>
+                    <Btn size="sm" variant="secondary" onClick={() => openEdit(p)}>
+                      <Icon name="edit" size={12} /> Edit
+                    </Btn>
+                    <Btn size="sm" variant="danger" onClick={() => del(p.id)}>
+                      <Icon name="trash" size={12} />
+                    </Btn>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ══ Add / Edit Modal ══ */}

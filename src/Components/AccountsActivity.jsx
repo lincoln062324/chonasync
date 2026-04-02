@@ -217,7 +217,7 @@ export default function AccountsActivity({ currentUser }) {
       )}
 
       {/* Summary row */}
-      <div className="stat-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: 20 }}>
+      <div className="stat-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", marginBottom: 20 }}>
         {[
           { label: "Total Accounts", value: accounts.length, icon: "👥", bg: "#eef2ff", color: "#4f46e5" },
           { label: "Total Logins", value: loginLogs.length, icon: "🔐", bg: "#ecfdf5", color: "#059669" },

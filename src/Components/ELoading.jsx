@@ -119,7 +119,7 @@ export default function ELoading({ loadProducts, onAdd, onUpdate, onDelete }) {
       </div>
 
       {/* ── Summary Stats ── */}
-      <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 20 }}>
+      <div className="stat-grid" style={{ gridTemplateColumns: "repeat( auto-fit, minmax(190px, 1fr))", marginBottom: 20 }}>
         <div className="stat-card">
           <div className="stat-card__icon" style={{ background: "#eff6ff" }}>
             <span style={{ fontSize: 20 }}>📱</span>
