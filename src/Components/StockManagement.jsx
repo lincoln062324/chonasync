@@ -3,6 +3,32 @@ import Icon from "../Components/Icon";
 import { Badge, Btn, Modal, Field } from "../Components/Primitives";
 import { CATEGORIES, CATEGORY_META } from "../data/constants";
 
+// ── SKU prefix per category ────────────────────────────────────────────────
+const SKU_PREFIX = {
+  "Beverages":        "BEV",
+  "Snacks":           "SNK",
+  "Canned/Dry Goods": "FD",
+  "Household":        "HH",
+  "Personal Care":    "PC",
+  "Dairy":            "DAI",
+  "Condiments":       "COND",
+  "Cigarettes":       "CIG",
+  "Hygiene":          "HYG",
+  "Groceries":        "GRC",
+  "Other":            "OTH",
+};
+
+function generateSKU(category, existingProducts) {
+  const prefix  = SKU_PREFIX[category] ?? "OTH";
+  const pattern = new RegExp(`^${prefix}-(\\d+)$`, "i");
+  let max = 0;
+  for (const p of existingProducts) {
+    const m = p.sku?.match(pattern);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `${prefix}-${String(max + 1).padStart(3, "0")}`;
+}
+
 export default function StockManagement({
   products,
   suppliers,
@@ -32,17 +58,30 @@ export default function StockManagement({
 
   // ── Modal openers ──────────────────────────────────────────────────────────
   const openAdd = () => {
+    const initialCategory = catFilter !== "All" ? catFilter : "Beverages";
     setForm({
-      name: "", sku: "", category: catFilter !== "All" ? catFilter : "Beverages",
+      name: "", sku: generateSKU(initialCategory, products),
+      category: initialCategory,
       supplierId: suppliers[0]?.id || "",
       cost: "", price: "", stock: "", reserved: 0, damaged: 0, reorderLevel: 10, unit: "piece",
     });
     setModal("add");
   };
+
+  // Re-generate SKU when category changes in the Add form
+  const handleFormChange = (key, value) => {
+    setForm(prev => {
+      const updated = { ...prev, [key]: value };
+      if (key === "category" && modal === "add") {
+        updated.sku = generateSKU(value, products);
+      }
+      return updated;
+    });
+  };
   const openEdit = p => { setSelected(p); setForm({ ...p }); setModal("edit"); };
   const openAdj  = p => { setSelected(p); setForm({ stock: p.stock, damaged: p.damaged, note: "" }); setModal("adjust"); };
 
-  const f = key => e => setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const f = key => e => handleFormChange(key, e.target.value);
 
   // ── Save ───────────────────────────────────────────────────────────────────
   const save = async () => {
@@ -254,8 +293,32 @@ export default function StockManagement({
           <Field label="Product Name" required>
             <input className="input" value={form.name || ""} onChange={f("name")} />
           </Field>
-          <Field label="SKU" required>
-            <input className="input" value={form.sku || ""} onChange={f("sku")} />
+          <Field label={modal === "add" ? "SKU (auto-assigned)" : "SKU"} required>
+            {modal === "add" ? (
+              <div style={{ position: "relative" }}>
+                <input
+                  className="input"
+                  value={form.sku || ""}
+                  readOnly
+                  tabIndex={-1}
+                  style={{
+                    background: "#f1f5f9", color: "#475569",
+                    fontWeight: 700, letterSpacing: "0.04em",
+                    cursor: "not-allowed", paddingRight: 72,
+                  }}
+                />
+                <span style={{
+                  position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                  fontSize: 11, fontWeight: 600, color: "#94a3b8",
+                  background: "#e2e8f0", borderRadius: 4, padding: "2px 7px",
+                  pointerEvents: "none",
+                }}>
+                  AUTO
+                </span>
+              </div>
+            ) : (
+              <input className="input" value={form.sku || ""} onChange={f("sku")} />
+            )}
           </Field>
           <Field label="Category">
             <select className="select" value={form.category || ""} onChange={f("category")}>
@@ -278,15 +341,6 @@ export default function StockManagement({
           </Field>
           <Field label="Opening Stock">
             <input className="input" type="number" value={form.stock || ""} onChange={f("stock")} />
-          </Field>
-          <Field label="Reorder Level">
-            <input className="input" type="number" value={form.reorderLevel || ""} onChange={f("reorderLevel")} />
-          </Field>
-          <Field label="Unit">
-            <input className="input" value={form.unit || ""} onChange={f("unit")} />
-          </Field>
-          <Field label="Damaged Units">
-            <input className="input" type="number" value={form.damaged || 0} onChange={f("damaged")} />
           </Field>
         </div>
         <div className="modal__footer">

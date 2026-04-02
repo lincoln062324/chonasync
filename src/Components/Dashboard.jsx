@@ -8,7 +8,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
   const totalValue   = products.reduce((s, p) => s + p.stock * p.cost, 0);
   const lowStock     = products.filter(p => p.stock > 0 && p.stock <= p.reorderLevel).length;
   const outOfStock   = products.filter(p => p.stock === 0).length;
-  const pendingPOs   = purchaseOrders.filter(p => p.status === "pending" || p.status === "transit").length;
 
   const productTxns    = transactions.filter(t => t.type !== "eloading");
   const eloadTxns      = transactions.filter(t => t.type === "eloading");
@@ -96,17 +95,6 @@ export default function Dashboard({ products, transactions, purchaseOrders, supp
             <div className="stat-card__value">{lowStock} / {outOfStock}</div>
             <div className="stat-card__label">Low / Out of Stock</div>
             <div className="stat-card__sub">Items needing attention</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-card--clickable" onClick={() => setActiveModule("purchasing")}>
-          <div className="stat-card__icon" style={{ background:"#f5f3ff", color:"#7c3aed" }}>
-            <Icon name="truck" size={22} />
-          </div>
-          <div>
-            <div className="stat-card__value">{pendingPOs}</div>
-            <div className="stat-card__label">Pending Orders</div>
-            <div className="stat-card__sub">Purchase orders</div>
           </div>
         </div>
 
