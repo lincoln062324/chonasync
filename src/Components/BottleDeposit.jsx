@@ -29,7 +29,8 @@ export async function createBottleDeposit(record) {
       status:             "borrowed",
       returned_qty:       0,
       date_borrowed:      record.dateBorrowed      || new Date().toISOString().slice(0, 10),
-      due_date:           record.dueDate           || null,   // ← NEW
+      due_date:           record.dueDate           || null,
+      recorded_by:        record.recordedBy        || null,  // ← NEW: staff who created the record
     }])
     .select()
     .single();
@@ -37,12 +38,17 @@ export async function createBottleDeposit(record) {
   return data;
 }
 
-export async function returnBottles(id, returnedQty, totalQty) {
+export async function returnBottles(id, returnedQty, totalQty, receivedBy) {
   const { supabase } = await import("../lib/supabase.js");
   const status = returnedQty >= totalQty ? "returned" : "partially_returned";
   const { data, error } = await supabase
     .from("bottle_deposits")
-    .update({ returned_qty: returnedQty, status, updated_at: new Date().toISOString() })
+    .update({
+      returned_qty: returnedQty,
+      status,
+      updated_at:  new Date().toISOString(),
+      received_by: receivedBy || null,  // ← NEW: staff who received the return
+    })
     .eq("id", id)
     .select()
     .single();
@@ -102,23 +108,29 @@ const STATUS_META = {
 };
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
-export default function BottleDeposit({ deposits = [], setDeposits }) {
+export default function BottleDeposit({ deposits = [], setDeposits, currentUser }) {
   const records    = deposits;
   const setRecords = setDeposits;
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState(null);
-  const [modal,     setModal]     = useState(null);   // "add"|"return"|"sql"|null
-  const [selected,  setSelected]  = useState(null);
-  const [returnQty, setReturnQty] = useState(1);
-  const [filter,    setFilter]    = useState("all");  // all|borrowed|partially_returned|returned|overdue
-  const [search,    setSearch]    = useState("");
-  const [saving,    setSaving]    = useState(false);
+
+  // Default staff name from logged-in user
+  const defaultStaff = currentUser?.name || currentUser?.email || currentUser?.username || "";
+
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState(null);
+  const [modal,      setModal]      = useState(null);   // "add"|"return"|"sql"|null
+  const [selected,   setSelected]   = useState(null);
+  const [returnQty,  setReturnQty]  = useState(1);
+  const [receivedBy, setReceivedBy] = useState("");     // ← NEW: who receives the return
+  const [filter,     setFilter]     = useState("all");  // all|borrowed|partially_returned|returned|overdue
+  const [search,     setSearch]     = useState("");
+  const [saving,     setSaving]     = useState(false);
 
   const [form, setForm] = useState({
     customerName: "", contact: "", bottleType: "Coke", bottleSize: "Big",
     qty: 1, depositPerBottle: 10, notes: "",
     dateBorrowed: TODAY(),
-    dueDate: "",   // ← NEW
+    dueDate: "",
+    recordedBy: defaultStaff,   // ← NEW: who created the borrow record
   });
 
   // ── Realtime subscription ───────────────────────────────────────────────────
@@ -160,6 +172,7 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
       qty: 1, depositPerBottle: 10, notes: "",
       dateBorrowed: TODAY(),
       dueDate: "",
+      recordedBy: defaultStaff,
     });
     setModal("add");
   };
@@ -178,6 +191,7 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
         qty: +form.qty,
         depositPerBottle: +form.depositPerBottle,
         dueDate: form.dueDate || null,
+        recordedBy: form.recordedBy.trim() || null,
       });
       setRecords(prev => [record, ...prev]);
       setModal(null);
@@ -188,6 +202,7 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
   const openReturn = (rec) => {
     setSelected(rec);
     setReturnQty(rec.qty - rec.returned_qty);
+    setReceivedBy(defaultStaff);
     setModal("return");
   };
 
@@ -197,7 +212,7 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
     if (newTotal > selected.qty) { alert("Return qty exceeds borrowed qty."); return; }
     setSaving(true);
     try {
-      const updated = await returnBottles(selected.id, newTotal, selected.qty);
+      const updated = await returnBottles(selected.id, newTotal, selected.qty, receivedBy.trim() || null);
       setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
       setModal(null);
     } catch (e) { alert("Failed to update: " + e.message); }
@@ -272,7 +287,7 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
       {/* ── Header ── */}
       <div className="page-header">
         <div>
-          <h1 className="page-header__title">🍾 Bottle Deposit Tracker</h1>
+          <h1 className="page-header__title">Bottle Deposit Tracker</h1>
           <p className="page-header__sub">Track borrowed bottles & customer deposits</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -427,6 +442,8 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
                 <th style={{ textAlign: "right" }}>Held</th>
                 <th>Borrowed On</th>
                 <th>Due Date</th>
+                <th>Recorded By</th>
+                <th>Received By</th>
                 <th>Status</th>
                 <th></th>
               </tr>
@@ -482,6 +499,20 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
                       ) : (
                         <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>—</span>
                       )}
+                    </td>
+                    <td style={{ fontSize: 12, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+                      {r.recorded_by
+                        ? <span title="Recorded by" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ fontSize: 11 }}>👤</span> {r.recorded_by}
+                          </span>
+                        : <span style={{ color: "var(--color-text-muted)" }}>—</span>}
+                    </td>
+                    <td style={{ fontSize: 12, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+                      {r.received_by
+                        ? <span title="Received by" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ fontSize: 11 }}>✅</span> {r.received_by}
+                          </span>
+                        : <span style={{ color: "var(--color-text-muted)" }}>—</span>}
                     </td>
                     <td>
                       <Badge color={overdue && r.status !== "returned" ? "red" : sm.color}>
@@ -543,6 +574,10 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
           <Field label="Notes (optional)" style={{ gridColumn: "1 / -1" }}>
             <input className="input" value={form.notes} onChange={f("notes")} placeholder="Any remarks…" />
           </Field>
+          <Field label="Recorded By" style={{ gridColumn: "1 / -1" }}>
+            <input className="input" value={form.recordedBy} onChange={f("recordedBy")}
+              placeholder="Staff name who created this record" />
+          </Field>
         </div>
 
         {/* Preview total */}
@@ -600,6 +635,15 @@ export default function BottleDeposit({ deposits = [], setDeposits }) {
                 value={returnQty}
                 onChange={e => setReturnQty(+e.target.value)}
                 autoFocus
+              />
+            </Field>
+
+            <Field label="Received By">
+              <input
+                className="input"
+                value={receivedBy}
+                onChange={e => setReceivedBy(e.target.value)}
+                placeholder="Staff name who received the bottles"
               />
             </Field>
 

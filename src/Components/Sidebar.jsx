@@ -9,7 +9,7 @@ const ROLE_COLORS = {
   owner:    { bg: "#fdf4ff", color: "#9333ea" },
 };
 
-// ── Mobile Top Bar (hidden on desktop via CSS) ─────────────────
+// ── Mobile Top Bar ─────────────────────────────────────────────────────────────
 function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogout }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const roleStyle = ROLE_COLORS[user?.role?.toLowerCase()] ?? { bg: "#f1f5f9", color: "#475569" };
@@ -23,9 +23,7 @@ function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogou
           onClick={onOpen}
           aria-label="Toggle navigation"
         >
-          <span />
-          <span />
-          <span />
+          <span /><span /><span />
         </button>
 
         {/* Brand */}
@@ -33,14 +31,9 @@ function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogou
           📦 <span>ChonaSync</span>
         </div>
 
-        {/* Right action buttons */}
+        {/* Right actions */}
         <div className="mobile-topbar__actions">
-          {/* Bell / Alerts shortcut */}
-          <button
-            className="mobile-topbar__icon-btn"
-            onClick={() => onNavigate("alerts")}
-            aria-label="Stock Alerts"
-          >
+          <button className="mobile-topbar__icon-btn" onClick={() => onNavigate("alerts")} aria-label="Stock Alerts">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
@@ -49,24 +42,17 @@ function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogou
             )}
           </button>
 
-          {/* Profile avatar button */}
+          {/* Avatar button → opens dropdown */}
           <button
             className="mobile-topbar__avatar-btn"
             onClick={() => setProfileOpen(v => !v)}
             aria-label="Profile menu"
           >
             {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user?.name}
-                className="mobile-topbar__avatar-img"
-                onError={e => { e.currentTarget.style.display = "none"; }}
-              />
+              <img src={user.avatarUrl} alt={user?.name} className="mobile-topbar__avatar-img"
+                onError={e => { e.currentTarget.style.display = "none"; }} />
             ) : (
-              <div
-                className="mobile-topbar__avatar-fallback"
-                style={{ background: user?.avatarColor || "#4f46e5" }}
-              >
+              <div className="mobile-topbar__avatar-fallback" style={{ background: user?.avatarColor || "#4f46e5" }}>
                 {user?.name?.charAt(0).toUpperCase() || "U"}
               </div>
             )}
@@ -77,25 +63,15 @@ function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogou
       {/* Profile dropdown */}
       {profileOpen && (
         <>
-          <div
-            className="mobile-profile-overlay"
-            onClick={() => setProfileOpen(false)}
-          />
+          <div className="mobile-profile-overlay" onClick={() => setProfileOpen(false)} />
           <div className="mobile-profile-dropdown">
-            {/* User info */}
             <div className="mobile-profile-dropdown__user">
-              <div
-                className="mobile-profile-dropdown__avatar"
-                style={{ background: user?.avatarColor || "#4f46e5" }}
-              >
+              <div className="mobile-profile-dropdown__avatar" style={{ background: user?.avatarColor || "#4f46e5" }}>
                 {user?.name?.charAt(0).toUpperCase() || "U"}
               </div>
               <div>
                 <div className="mobile-profile-dropdown__name">{user?.name || "User"}</div>
-                <span
-                  className="mobile-profile-dropdown__role"
-                  style={{ background: roleStyle.bg, color: roleStyle.color }}
-                >
+                <span className="mobile-profile-dropdown__role" style={{ background: roleStyle.bg, color: roleStyle.color }}>
                   {user?.role || "staff"}
                 </span>
               </div>
@@ -103,18 +79,14 @@ function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogou
 
             <div className="mobile-profile-dropdown__divider" />
 
-            {/* Quick nav shortcuts */}
             {[
-              { id: "dashboard",  label: "Dashboard",   emoji: "🏠" },
-              { id: "pos",        label: "POS",          emoji: "🧾" },
-              { id: "stock",      label: "Stock",        emoji: "📦" },
-              { id: "activity",   label: "My Account",   emoji: "🔐" },
+              { id: "dashboard",   label: "Dashboard",   emoji: "🏠" },
+              { id: "pos",         label: "POS",          emoji: "🧾" },
+              { id: "stock",       label: "Stock",        emoji: "📦" },
+              { id: "activity",    label: "Accounts",     emoji: "🔐" },
             ].map(item => (
-              <button
-                key={item.id}
-                className="mobile-profile-dropdown__item"
-                onClick={() => { onNavigate(item.id); setProfileOpen(false); }}
-              >
+              <button key={item.id} className="mobile-profile-dropdown__item"
+                onClick={() => { onNavigate(item.id); setProfileOpen(false); }}>
                 <span>{item.emoji}</span>
                 {item.label}
               </button>
@@ -122,11 +94,9 @@ function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogou
 
             <div className="mobile-profile-dropdown__divider" />
 
-            {/* Sign out */}
             <button
               className="mobile-profile-dropdown__item mobile-profile-dropdown__item--danger"
-              onClick={() => { setProfileOpen(false); onLogout(); }}
-            >
+              onClick={() => { setProfileOpen(false); onLogout(); }}>
               <span>🚪</span> Sign Out
             </button>
           </div>
@@ -136,24 +106,20 @@ function MobileTopBar({ onOpen, isOpen, lowStockCount, user, onNavigate, onLogou
   );
 }
 
+// ─── MAIN SIDEBAR ─────────────────────────────────────────────────────────────
 export default function Sidebar({ activeModule, setActiveModule, lowStockCount, user, onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const effectiveModule = activeModule === "saleshistory-eload" ? "saleshistory" : activeModule;
   const roleStyle = ROLE_COLORS[user?.role?.toLowerCase()] ?? { bg: "#f1f5f9", color: "#475569" };
 
-  // Close drawer on resize
   useEffect(() => {
     const close = () => setMobileOpen(false);
     window.addEventListener("resize", close);
     return () => window.removeEventListener("resize", close);
   }, []);
 
-  // Close drawer on route change
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [activeModule]);
+  useEffect(() => { setMobileOpen(false); }, [activeModule]);
 
-  // Lock body scroll when drawer is open
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -166,7 +132,6 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
 
   return (
     <>
-      {/* Mobile Top Bar */}
       <MobileTopBar
         onOpen={() => setMobileOpen(v => !v)}
         isOpen={mobileOpen}
@@ -176,47 +141,35 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
         onLogout={onLogout}
       />
 
-      {/* Overlay */}
-      <div
-        className={`sidebar-overlay${mobileOpen ? " sidebar-overlay--visible" : ""}`}
-        onClick={() => setMobileOpen(false)}
-      />
+      <div className={`sidebar-overlay${mobileOpen ? " sidebar-overlay--visible" : ""}`}
+        onClick={() => setMobileOpen(false)} />
 
-      {/* Sidebar Drawer */}
       <aside className={`sidebar${mobileOpen ? " sidebar--open" : ""}`}>
+        {/* Brand */}
         <div className="sidebar__brand">
           <img className="logopaw" src="/paw.png" alt="ChonaSync Logo" />
-          <div className="sidebar__brand-name"> ChonaSync</div>
+          <div className="sidebar__brand-name">ChonaSync</div>
           <div className="sidebar__brand-sub">Tindahan System</div>
         </div>
 
+        {/* User card — clickable, navigates to Profile */}
         {user && (
-          <div style={{
-            margin: "0 10px 8px", padding: "10px 12px",
-            background: "#1e293b", borderRadius: 10,
-            display: "flex", alignItems: "center", gap: 10,
-          }}>
+          <button
+            onClick={() => handleNav("profile")}
+            style={{
+              margin: "0 10px 8px", padding: "10px 12px",
+              background: activeModule === "profile" ? "#1e40af22" : "#1e293b",
+              borderRadius: 10, border: activeModule === "profile" ? "1.5px solid #3b82f680" : "1.5px solid transparent",
+              display: "flex", alignItems: "center", gap: 10,
+              cursor: "pointer", width: "calc(100% - 20px)",
+              textAlign: "left", transition: "all 0.15s",
+            }}
+            title="My Profile"
+          >
             {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.name}
-                style={{
-                  width: 34, height: 34, borderRadius: "50%",
-                  objectFit: "cover", flexShrink: 0,
-                  border: "2px solid rgba(255,255,255,0.15)",
-                }}
-                onError={e => {
-                  e.currentTarget.style.display = "none";
-                  const fallback = document.createElement("div");
-                  fallback.textContent = user.name.charAt(0).toUpperCase();
-                  Object.assign(fallback.style, {
-                    width: "34px", height: "34px", borderRadius: "50%",
-                    background: user.avatarColor || "#4f46e5",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "15px", fontWeight: "800", color: "#fff", flexShrink: "0",
-                  });
-                  e.currentTarget.parentNode.insertBefore(fallback, e.currentTarget);
-                }}
+              <img src={user.avatarUrl} alt={user.name}
+                style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid rgba(255,255,255,0.15)" }}
+                onError={e => { e.currentTarget.style.display = "none"; }}
               />
             ) : (
               <div style={{
@@ -229,12 +182,8 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
                 {user.name.charAt(0).toUpperCase()}
               </div>
             )}
-
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: 13, fontWeight: 700, color: "#f1f5f9",
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {user.name}
               </div>
               <span style={{
@@ -245,9 +194,12 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
                 {user.role}
               </span>
             </div>
-          </div>
+            {/* Edit icon */}
+            <div style={{ fontSize: 12, color: "#475569", flexShrink: 0 }} title="Edit profile">✏️</div>
+          </button>
         )}
 
+        {/* Nav items */}
         <nav className="sidebar__nav">
           {NAV_ITEMS.map(item => (
             <button
@@ -277,10 +229,9 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
               style={{
                 marginTop: 10, width: "100%", padding: "7px 0", borderRadius: 8,
                 border: "1px solid #334155", background: "transparent",
-                color: "#64748b", fontSize: 12, fontWeight: 600,
-                cursor: "pointer", display: "flex", alignItems: "center",
-                justifyContent: "center", gap: 6, transition: "all 0.15s",
-                fontFamily: "'DM Sans', sans-serif",
+                color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                transition: "all 0.15s", fontFamily: "'DM Sans', sans-serif",
               }}
               onMouseEnter={e => { e.currentTarget.style.background = "#1e293b"; e.currentTarget.style.color = "#f87171"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748b"; }}

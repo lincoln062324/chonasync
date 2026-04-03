@@ -23,6 +23,11 @@ const ACTION_META = {
   sale:            { icon: "🛒", color: "#d97706", bg: "#fffbeb" },
   stock_adjust:    { icon: "📦", color: "#7c3aed", bg: "#f5f3ff" },
   account_created: { icon: "✨", color: "#4f46e5", bg: "#eef2ff" },
+  // ── Profile self-service actions ──────────────────────────────────────────
+  profile_updated: { icon: "✏️", color: "#7c3aed", bg: "#f5f3ff" },
+  pin_changed:     { icon: "🔑", color: "#d97706", bg: "#fffbeb" },
+  pin_reset:       { icon: "🔑", color: "#dc2626", bg: "#fef2f2" },  // admin-reset
+  account_deactivated: { icon: "🚫", color: "#dc2626", bg: "#fef2f2" },
   default:         { icon: "📋", color: "#475569", bg: "#f8fafc" },
 };
 
@@ -54,7 +59,15 @@ function formatDateTime(dateStr) {
   });
 }
 
-function Avatar({ name, color, size = 36 }) {
+function Avatar({ name, color, url, size = 36 }) {
+  const [err, setErr] = useState(false);
+  if (url && !err) {
+    return (
+      <img src={url} alt={name} onError={() => setErr(true)}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0,
+          border: `2px solid ${color || "#4f46e5"}` }} />
+    );
+  }
   return (
     <div style={{
       width: size, height: size, borderRadius: "50%",
@@ -74,18 +87,17 @@ export default function AccountsActivity({ currentUser }) {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
 
-  // Account modal
-  const [modal,      setModal]      = useState(null); // "add" | "edit" | "pin" | null
+  // Account modal state
+  const [modal,      setModal]      = useState(null);  // "add" | "edit" | "pin" | null
   const [selAcc,     setSelAcc]     = useState(null);
   const [form,       setForm]       = useState({});
-  const [newPin,     setNewPin]     = useState("");
-  const [pinStep,    setPinStep]    = useState(1); // 1=set, 2=confirm
+  const [pinStep,    setPinStep]    = useState(1);
   const [pinA,       setPinA]       = useState("");
   const [pinB,       setPinB]       = useState("");
   const [pinErr,     setPinErr]     = useState("");
   const [actionMsg,  setActionMsg]  = useState("");
 
-  // Filter
+  // Filters
   const [filterAction, setFilterAction] = useState("All");
   const [filterUser,   setFilterUser]   = useState("All");
 
@@ -110,8 +122,8 @@ export default function AccountsActivity({ currentUser }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Derived data ───────────────────────────────────────────────────────────
-  const loginLogs  = logs.filter(l => l.action === "login");
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const loginLogs   = logs.filter(l => l.action === "login");
   const actionTypes = ["All", ...new Set(logs.map(l => l.action))];
   const userList    = ["All", ...new Set(logs.map(l => l.userName).filter(Boolean))];
 
@@ -120,17 +132,16 @@ export default function AccountsActivity({ currentUser }) {
     (filterUser   === "All" || l.userName === filterUser)
   );
 
+  // ── Profile-change events summary ─────────────────────────────────────────
+  const profileChangeLogs = logs.filter(l =>
+    l.action === "profile_updated" || l.action === "pin_changed" || l.action === "pin_reset"
+  );
+
   // ── Account CRUD ──────────────────────────────────────────────────────────
   const openAdd = () => {
     setForm({ name: "", role: "cashier", avatarColor: AVATAR_COLORS[0] });
     setPinA(""); setPinB(""); setPinStep(1); setPinErr("");
     setModal("add");
-  };
-
-  const openEdit = (acc) => {
-    setSelAcc(acc);
-    setForm({ name: acc.name, role: acc.role, avatarColor: acc.avatarColor });
-    setModal("edit");
   };
 
   const openPin = (acc) => {
@@ -141,7 +152,7 @@ export default function AccountsActivity({ currentUser }) {
 
   const saveAccount = async () => {
     if (!form.name?.trim()) { setPinErr("Name is required."); return; }
-    if (modal === "add" && pinA.length < 4) { setPinErr("Set a 4-digit PIN first."); return; }
+    if (pinA.length < 4)    { setPinErr("Set a 4-digit PIN first."); return; }
     try {
       const { createAccount, logActivity } = await import("../lib/supabase.js");
       const acc = await createAccount({ name: form.name, role: form.role, avatarColor: form.avatarColor, pin: pinA });
@@ -149,7 +160,7 @@ export default function AccountsActivity({ currentUser }) {
       setActionMsg(`✅ Account "${acc.name}" created!`);
       setModal(null);
       load();
-      setTimeout(() => setActionMsg(""), 3000);
+      setTimeout(() => setActionMsg(""), 3500);
     } catch (err) { setPinErr(err.message); }
   };
 
@@ -159,10 +170,10 @@ export default function AccountsActivity({ currentUser }) {
     try {
       const { updateAccountPin, logActivity } = await import("../lib/supabase.js");
       await updateAccountPin(selAcc.id, pinA);
-      await logActivity(currentUser?.id, "pin_reset", `Reset PIN for: ${selAcc.name}`);
-      setActionMsg(`✅ PIN updated for "${selAcc.name}".`);
+      await logActivity(currentUser?.id, "pin_reset", `Admin reset PIN for: ${selAcc.name}`);
+      setActionMsg(`✅ PIN reset for "${selAcc.name}".`);
       setModal(null);
-      setTimeout(() => setActionMsg(""), 3000);
+      setTimeout(() => setActionMsg(""), 3500);
     } catch (err) { setPinErr(err.message); }
   };
 
@@ -174,22 +185,10 @@ export default function AccountsActivity({ currentUser }) {
       await logActivity(currentUser?.id, "account_deactivated", `Deactivated: ${acc.name}`);
       setActionMsg(`⚠️ "${acc.name}" has been deactivated.`);
       load();
-      setTimeout(() => setActionMsg(""), 3000);
+      setTimeout(() => setActionMsg(""), 3500);
     } catch (err) { alert(err.message); }
   };
 
-  // ── PIN input helpers ─────────────────────────────────────────────────────
-  const handlePinKey = (val, current, setter, onComplete) => {
-    setPinErr("");
-    if (val === "⌫") { setter(p => p.slice(0, -1)); return; }
-    if (val === "C")  { setter(""); return; }
-    if (current.length >= 4) return;
-    const next = current + val;
-    setter(next);
-    if (next.length === 4) setTimeout(() => onComplete(next), 80);
-  };
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div>
       {/* Header */}
@@ -216,24 +215,47 @@ export default function AccountsActivity({ currentUser }) {
         </div>
       )}
 
-      {/* Summary row */}
+      {/* ── Profile change summary banner ── */}
+      {profileChangeLogs.length > 0 && (
+        <div style={{
+          background: "#f5f3ff", border: "1.5px solid #ddd6fe", borderRadius: 12,
+          padding: "12px 16px", marginBottom: 20,
+          display: "flex", alignItems: "center", gap: 14,
+        }}>
+          <span style={{ fontSize: 22 }}>✏️</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, color: "#7c3aed", fontSize: 13 }}>
+              {profileChangeLogs.length} Profile Change{profileChangeLogs.length !== 1 ? "s" : ""} Recorded
+            </div>
+            <div style={{ fontSize: 12, color: "#6d28d9", marginTop: 2 }}>
+              {profileChangeLogs.slice(0, 3).map(l => `${l.userName} (${l.action.replace(/_/g, " ")})`).join(" · ")}
+              {profileChangeLogs.length > 3 && ` +${profileChangeLogs.length - 3} more`}
+            </div>
+          </div>
+          <button onClick={() => { setTab("audit"); setFilterAction("profile_updated"); }}
+            style={{ padding: "6px 14px", borderRadius: 8, border: "1.5px solid #7c3aed", background: "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            View →
+          </button>
+        </div>
+      )}
+
+      {/* Summary stats */}
       <div className="stat-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", marginBottom: 20 }}>
         {[
-          { label: "Total Accounts", value: accounts.length, icon: "👥", bg: "#eef2ff", color: "#4f46e5" },
-          { label: "Total Logins", value: loginLogs.length, icon: "🔐", bg: "#ecfdf5", color: "#059669" },
-          { label: "Activity Records", value: logs.length, icon: "📋", bg: "#fffbeb", color: "#d97706" },
-          { label: "Active Today", value: [...new Set(logs.filter(l => {
-              const d = new Date(l.createdAt);
-              const t = new Date();
+          { label: "Total Accounts",   value: accounts.length,          icon: "👥", bg: "#eef2ff", color: "#4f46e5" },
+          { label: "Total Logins",     value: loginLogs.length,         icon: "🔐", bg: "#ecfdf5", color: "#059669" },
+          { label: "Activity Records", value: logs.length,              icon: "📋", bg: "#fffbeb", color: "#d97706" },
+          { label: "Profile Changes",  value: profileChangeLogs.length, icon: "✏️", bg: "#f5f3ff", color: "#7c3aed" },
+          { label: "Active Today",
+            value: [...new Set(logs.filter(l => {
+              const d = new Date(l.createdAt), t = new Date();
               return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
             }).map(l => l.accountId))].length,
             icon: "🟢", bg: "#f0fdf4", color: "#15803d",
           },
         ].map(s => (
           <div key={s.label} className="stat-card">
-            <div className="stat-card__icon" style={{ background: s.bg, color: s.color, fontSize: 20 }}>
-              {s.icon}
-            </div>
+            <div className="stat-card__icon" style={{ background: s.bg, color: s.color, fontSize: 20 }}>{s.icon}</div>
             <div>
               <div className="stat-card__value">{s.value}</div>
               <div className="stat-card__label">{s.label}</div>
@@ -252,11 +274,7 @@ export default function AccountsActivity({ currentUser }) {
         ))}
       </div>
 
-      {loading && (
-        <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", fontSize: 14 }}>
-          Loading…
-        </div>
-      )}
+      {loading && <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", fontSize: 14 }}>Loading…</div>}
 
       {error && (
         <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 16px", color: "#dc2626", fontSize: 13, marginBottom: 16 }}>
@@ -268,22 +286,11 @@ export default function AccountsActivity({ currentUser }) {
       {/* ── ACTIVITY FEED ── */}
       {!loading && tab === "activity" && (
         <div>
-          {/* Filters */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-            <select
-              className="select"
-              value={filterUser}
-              onChange={e => setFilterUser(e.target.value)}
-              style={{ minWidth: 140 }}
-            >
+            <select className="select" value={filterUser}   onChange={e => setFilterUser(e.target.value)}   style={{ minWidth: 140 }}>
               {userList.map(u => <option key={u}>{u}</option>)}
             </select>
-            <select
-              className="select"
-              value={filterAction}
-              onChange={e => setFilterAction(e.target.value)}
-              style={{ minWidth: 140 }}
-            >
+            <select className="select" value={filterAction} onChange={e => setFilterAction(e.target.value)} style={{ minWidth: 140 }}>
               {actionTypes.map(a => <option key={a}>{a}</option>)}
             </select>
           </div>
@@ -295,15 +302,18 @@ export default function AccountsActivity({ currentUser }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {filteredLogs.map(log => {
                   const meta = ACTION_META[log.action] ?? ACTION_META.default;
+                  const isProfileChange = log.action === "profile_updated" || log.action === "pin_changed";
                   return (
-                    <div key={log.id} style={{
-                      display: "flex", alignItems: "flex-start", gap: 12,
-                      padding: "10px 12px", borderRadius: 8, transition: "background 0.1s",
-                    }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    <div key={log.id}
+                      style={{
+                        display: "flex", alignItems: "flex-start", gap: 12,
+                        padding: "10px 12px", borderRadius: 8, transition: "background 0.1s",
+                        background: isProfileChange ? `${meta.bg}80` : "transparent",
+                        border: isProfileChange ? `1px solid ${meta.color}30` : "1px solid transparent",
+                      }}
+                      onMouseEnter={e => { if (!isProfileChange) e.currentTarget.style.background = "#f8fafc"; }}
+                      onMouseLeave={e => { if (!isProfileChange) e.currentTarget.style.background = "transparent"; }}
                     >
-                      {/* Action icon */}
                       <div style={{
                         width: 34, height: 34, borderRadius: 10, background: meta.bg,
                         display: "flex", alignItems: "center", justifyContent: "center",
@@ -312,7 +322,6 @@ export default function AccountsActivity({ currentUser }) {
                         {meta.icon}
                       </div>
 
-                      {/* Content */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
@@ -320,7 +329,8 @@ export default function AccountsActivity({ currentUser }) {
                           </span>
                           <span style={{
                             fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99,
-                            background: meta.bg, color: meta.color, textTransform: "uppercase", letterSpacing: "0.05em",
+                            background: meta.bg, color: meta.color,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
                           }}>
                             {log.action.replace(/_/g, " ")}
                           </span>
@@ -330,7 +340,6 @@ export default function AccountsActivity({ currentUser }) {
                         )}
                       </div>
 
-                      {/* Timestamp */}
                       <div style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
                         {timeAgo(log.createdAt)}
                       </div>
@@ -348,12 +357,7 @@ export default function AccountsActivity({ currentUser }) {
         <div className="table-wrap">
           <table className="data-table">
             <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>When</th>
-                <th>Date &amp; Time</th>
-              </tr>
+              <tr><th>User</th><th>Role</th><th>When</th><th>Date &amp; Time</th></tr>
             </thead>
             <tbody>
               {loginLogs.length === 0 ? (
@@ -364,24 +368,14 @@ export default function AccountsActivity({ currentUser }) {
                   <tr key={log.id}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: "50%", background: "#4f46e5",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 13, fontWeight: 800, color: "#fff",
-                        }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#fff" }}>
                           {(log.userName || "?").charAt(0).toUpperCase()}
                         </div>
-                        <span style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>
-                          {log.userName || "Unknown"}
-                        </span>
+                        <span style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{log.userName || "Unknown"}</span>
                       </div>
                     </td>
                     <td>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
-                        background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`,
-                        textTransform: "capitalize",
-                      }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, textTransform: "capitalize" }}>
                         {log.userRole}
                       </span>
                     </td>
@@ -401,31 +395,25 @@ export default function AccountsActivity({ currentUser }) {
           <div className="supplier-grid">
             {accounts.map(acc => {
               const rm = ROLE_META[acc.role?.toLowerCase()] ?? ROLE_META.staff;
-              const accLogs = logs.filter(l => l.accountId === acc.id);
+              const accLogs   = logs.filter(l => l.accountId === acc.id);
               const lastLogin = loginLogs.find(l => l.accountId === acc.id);
+              const profileChanges = accLogs.filter(l => l.action === "profile_updated" || l.action === "pin_changed");
 
               return (
                 <div key={acc.id} className="supplier-card">
-                  {/* Header */}
                   <div className="supplier-card__header">
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Avatar name={acc.name} color={acc.avatarColor} size={40} />
+                      <Avatar name={acc.name} color={acc.avatarColor} url={acc.avatarUrl} size={40} />
                       <div>
                         <div className="supplier-card__name">{acc.name}</div>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
-                          background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`,
-                          textTransform: "capitalize",
-                        }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, textTransform: "capitalize" }}>
                           {rm.label}
                         </span>
                       </div>
                     </div>
                     {canManage && (
                       <div className="btn-row">
-                        <Btn size="sm" variant="secondary" onClick={() => openPin(acc)} title="Change PIN">
-                          🔑
-                        </Btn>
+                        <Btn size="sm" variant="secondary" onClick={() => openPin(acc)} title="Reset PIN">🔑</Btn>
                         {acc.id !== currentUser?.id && (
                           <Btn size="sm" variant="danger" onClick={() => deactivate(acc)}>
                             <Icon name="trash" size={12} />
@@ -435,11 +423,11 @@ export default function AccountsActivity({ currentUser }) {
                     )}
                   </div>
 
-                  {/* Stats */}
                   <div className="supplier-meta-grid">
                     {[
-                      ["Activity", `${accLogs.length} records`],
-                      ["Last Login", lastLogin ? timeAgo(lastLogin.createdAt) : "Never"],
+                      ["Activity",       `${accLogs.length} records`],
+                      ["Last Login",     lastLogin ? timeAgo(lastLogin.createdAt) : "Never"],
+                      ["Profile Edits",  profileChanges.length > 0 ? `${profileChanges.length} time${profileChanges.length > 1 ? "s" : ""}` : "None"],
                     ].map(([label, value]) => (
                       <div key={label} className="supplier-meta-item">
                         <div className="supplier-meta-item__label">{label}</div>
@@ -450,12 +438,24 @@ export default function AccountsActivity({ currentUser }) {
 
                   {/* Last activity */}
                   {accLogs[0] && (
-                    <div style={{
-                      fontSize: 11, color: "#94a3b8", padding: "8px 0 0",
-                      borderTop: "1px solid #f1f5f9", marginTop: 8,
-                    }}>
+                    <div style={{ fontSize: 11, color: "#94a3b8", padding: "8px 0 0", borderTop: "1px solid #f1f5f9", marginTop: 8 }}>
                       Last: <span style={{ color: "#64748b" }}>{accLogs[0].action.replace(/_/g, " ")}</span>
                       {" · "}{timeAgo(accLogs[0].createdAt)}
+                    </div>
+                  )}
+
+                  {/* Profile change history for this account */}
+                  {profileChanges.length > 0 && (
+                    <div style={{ marginTop: 8, padding: "8px 10px", background: "#f5f3ff", borderRadius: 8, border: "1px solid #ddd6fe" }}>
+                      <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 700, marginBottom: 4 }}>
+                        ✏️ Recent profile changes
+                      </div>
+                      {profileChanges.slice(0, 2).map(l => (
+                        <div key={l.id} style={{ fontSize: 11, color: "#6d28d9", display: "flex", justifyContent: "space-between" }}>
+                          <span>{l.action.replace(/_/g, " ")} — {l.detail || "—"}</span>
+                          <span style={{ color: "#a78bfa", marginLeft: 8, flexShrink: 0 }}>{timeAgo(l.createdAt)}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -476,9 +476,8 @@ export default function AccountsActivity({ currentUser }) {
       {/* ── AUDIT LOGS ── */}
       {!loading && tab === "audit" && (
         <div>
-          {/* Filters */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-            <select className="select" value={filterUser} onChange={e => setFilterUser(e.target.value)} style={{ minWidth: 140 }}>
+            <select className="select" value={filterUser}   onChange={e => setFilterUser(e.target.value)}   style={{ minWidth: 140 }}>
               {userList.map(u => <option key={u}>{u}</option>)}
             </select>
             <select className="select" value={filterAction} onChange={e => setFilterAction(e.target.value)} style={{ minWidth: 140 }}>
@@ -489,14 +488,7 @@ export default function AccountsActivity({ currentUser }) {
           <div className="table-wrap">
             <table className="data-table">
               <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th>Action</th>
-                  <th>Detail</th>
-                  <th>When</th>
-                  <th>Date &amp; Time</th>
-                </tr>
+                <tr><th>User</th><th>Role</th><th>Action</th><th>Detail</th><th>When</th><th>Date &amp; Time</th></tr>
               </thead>
               <tbody>
                 {filteredLogs.length === 0 ? (
@@ -504,15 +496,12 @@ export default function AccountsActivity({ currentUser }) {
                 ) : filteredLogs.map(log => {
                   const meta = ACTION_META[log.action] ?? ACTION_META.default;
                   const rm   = ROLE_META[log.userRole] ?? ROLE_META.staff;
+                  const isProfileChange = log.action === "profile_updated" || log.action === "pin_changed";
                   return (
-                    <tr key={log.id}>
+                    <tr key={log.id} style={{ background: isProfileChange ? `${meta.bg}60` : undefined }}>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{
-                            width: 28, height: 28, borderRadius: "50%", background: "#4f46e5",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 11, fontWeight: 800, color: "#fff",
-                          }}>
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>
                             {(log.userName || "?").charAt(0).toUpperCase()}
                           </div>
                           <span className="td-name">{log.userName || "Unknown"}</span>
@@ -520,20 +509,13 @@ export default function AccountsActivity({ currentUser }) {
                       </td>
                       <td>
                         {log.userRole && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99,
-                            background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, textTransform: "capitalize",
-                          }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, textTransform: "capitalize" }}>
                             {log.userRole}
                           </span>
                         )}
                       </td>
                       <td>
-                        <span style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99,
-                          background: meta.bg, color: meta.color,
-                        }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99, background: meta.bg, color: meta.color }}>
                           {meta.icon} {log.action.replace(/_/g, " ")}
                         </span>
                       </td>
@@ -555,7 +537,6 @@ export default function AccountsActivity({ currentUser }) {
       <Modal open={modal === "add"} onClose={() => setModal(null)} title="Add New Account" maxWidth={480}>
         {pinStep === 0 ? (
           <>
-            {/* Avatar + color */}
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <Avatar name={form.name || "?"} color={form.avatarColor || "#4f46e5"} size={56} />
               <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
@@ -583,8 +564,7 @@ export default function AccountsActivity({ currentUser }) {
                         background: form.role === r ? rm2.bg : "#f8fafc",
                         color: form.role === r ? rm2.color : "#475569",
                         fontWeight: form.role === r ? 700 : 500, fontSize: 12,
-                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-                        textTransform: "capitalize", transition: "all 0.15s",
+                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif", textTransform: "capitalize", transition: "all 0.15s",
                       }}>
                         {rm2.label}
                       </button>
@@ -617,8 +597,8 @@ export default function AccountsActivity({ currentUser }) {
         )}
       </Modal>
 
-      {/* ══ Change PIN Modal ══ */}
-      <Modal open={modal === "pin"} onClose={() => setModal(null)} title={`Change PIN — ${selAcc?.name}`} maxWidth={380}>
+      {/* ══ Admin PIN Reset Modal ══ */}
+      <Modal open={modal === "pin"} onClose={() => setModal(null)} title={`Reset PIN — ${selAcc?.name}`} maxWidth={380}>
         {selAcc && (
           <ModalPinSetup
             step={pinStep} setStep={setPinStep}
@@ -636,7 +616,7 @@ export default function AccountsActivity({ currentUser }) {
   );
 }
 
-/* ── PIN Setup sub-component ── */
+/* ── PIN Setup sub-component (shared between add & admin-reset) ── */
 function ModalPinSetup({ step, setStep, pinA, setPinA, pinB, setPinB, error, setError, name, color, onComplete, onBack, backLabel = "← Back" }) {
   const isCurrent = step === 1 ? pinA : pinB;
   const currentSetter = step === 1 ? setPinA : setPinB;
@@ -667,11 +647,7 @@ function ModalPinSetup({ step, setStep, pinA, setPinA, pinB, setPinB, error, set
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, padding: "10px 14px", background: "#f8fafc", borderRadius: 10 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: "50%", background: color || "#4f46e5",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 16, fontWeight: 800, color: "#fff",
-        }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", background: color || "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff" }}>
           {(name || "?").charAt(0).toUpperCase()}
         </div>
         <div>
@@ -680,33 +656,25 @@ function ModalPinSetup({ step, setStep, pinA, setPinA, pinB, setPinB, error, set
         </div>
       </div>
 
-      {/* Progress */}
       <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
         {[1, 2].map(s => (
-          <div key={s} style={{
-            height: 4, flex: 1, borderRadius: 99,
-            background: step >= s ? (color || "#4f46e5") : "#e2e8f0",
-            transition: "background 0.2s",
-          }} />
+          <div key={s} style={{ height: 4, flex: 1, borderRadius: 99, background: step >= s ? (color || "#4f46e5") : "#e2e8f0", transition: "background 0.2s" }} />
         ))}
       </div>
 
-      {/* PIN dots */}
       <div style={{ display: "flex", justifyContent: "center", gap: 14, marginBottom: 20 }}>
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} style={{
             width: 16, height: 16, borderRadius: "50%",
             background: i < isCurrent.length ? (color || "#4f46e5") : "transparent",
             border: `2.5px solid ${i < isCurrent.length ? (color || "#4f46e5") : "#cbd5e1"}`,
-            transition: "all 0.15s",
-            transform: i < isCurrent.length ? "scale(1.15)" : "scale(1)",
+            transition: "all 0.15s", transform: i < isCurrent.length ? "scale(1.15)" : "scale(1)",
           }} />
         ))}
       </div>
 
       {error && <div style={{ textAlign: "center", fontSize: 12, color: "#dc2626", fontWeight: 600, marginBottom: 14 }}>{error}</div>}
 
-      {/* Numpad */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
         {["1","2","3","4","5","6","7","8","9","C","0","⌫"].map(key => {
           const isClear = key === "C", isBack = key === "⌫";
@@ -715,8 +683,7 @@ function ModalPinSetup({ step, setStep, pinA, setPinA, pinB, setPinB, error, set
               padding: "13px 0", borderRadius: 10, border: "1.5px solid #e2e8f0",
               background: isClear ? "#fef2f2" : isBack ? "#fff7ed" : "#f8fafc",
               color: isClear ? "#dc2626" : isBack ? "#c2410c" : "#0f172a",
-              fontSize: 17, fontWeight: 700, cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif", transition: "all 0.1s",
+              fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.1s",
             }}>
               {key}
             </button>

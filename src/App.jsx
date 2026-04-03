@@ -25,6 +25,7 @@ import Reports              from "./Components/Reports";
 import SalesHistory         from "./Components/SalesHistory";
 import AccountsActivity     from "./Components/AccountsActivity";
 import BottleDeposit        from "./Components/BottleDeposit";
+import UserProfile          from "./Components/UserProfile";          // ← NEW
 import { fetchBottleDeposits } from "./Components/BottleDeposit";
 
 export default function App() {
@@ -40,6 +41,15 @@ export default function App() {
   const [loading,        setLoading]        = useState(true);
   const [dbError,        setDbError]        = useState(null);
 
+  // ── Mutable user state (updated after profile edits) ──────────────────────
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Keep currentUser in sync with auth user (on login/logout)
+  useEffect(() => {
+    setCurrentUser(user);
+  }, [user?.id]);
+
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
     async function bootstrap() {
       try {
@@ -71,17 +81,25 @@ export default function App() {
   const lowStockCount = products.filter(p => p.stock === 0 || p.stock <= p.reorderLevel).length;
   const isPos         = activeModule === "pos";
 
-  // Log module navigation
+  // ── Navigation ────────────────────────────────────────────────────────────
   const navigate = (moduleId) => {
     setActiveModule(moduleId);
-    if (user) logActivity(user.id, "navigate", `Opened ${moduleId}`).catch(() => {});
+    if (currentUser) logActivity(currentUser.id, "navigate", `Opened ${moduleId}`).catch(() => {});
   };
 
-  // Show login screen if not authenticated
-  if (!user) {
-    return <Login onLogin={login} />;
+  // ── Profile update callback ───────────────────────────────────────────────
+  // Called by UserProfile when the user saves their name/photo/color.
+  // Updates both the mutable currentUser state AND sessionStorage via login().
+  const handleUserUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    login(updatedUser);          // re-persists to sessionStorage
+  };
+
+  if (!currentUser) {
+    return <Login onLogin={(u) => { login(u); setCurrentUser(u); }} />;
   }
 
+  // ── Transaction handlers ──────────────────────────────────────────────────
   const handleSaveTransaction = async (txn) => {
     try {
       const saved = await saveTransaction(txn);
@@ -112,6 +130,7 @@ export default function App() {
     } catch (err) { alert("Failed to process return: " + err.message); }
   };
 
+  // ── Loading / error screens ───────────────────────────────────────────────
   if (loading) {
     return (
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
@@ -139,14 +158,15 @@ export default function App() {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="app-shell">
       <Sidebar
         activeModule={activeModule}
         setActiveModule={navigate}
         lowStockCount={lowStockCount}
-        user={user}
-        onLogout={() => logout(user?.id)}
+        user={currentUser}           // ← always up-to-date
+        onLogout={() => logout(currentUser?.id)}
       />
 
       <main className="main-content">
@@ -190,12 +210,10 @@ export default function App() {
             />
           )}
 
-          {/* Sales History — product tab default */}
           {activeModule === "saleshistory" && (
             <SalesHistory transactions={transactions} initialTab="product" />
           )}
 
-          {/* Sales History — e-load tab (via dashboard shortcut) */}
           {activeModule === "saleshistory-eload" && (
             <SalesHistory transactions={transactions} initialTab="eload" />
           )}
@@ -226,23 +244,36 @@ export default function App() {
             />
           )}
 
-          {activeModule === "alerts"  && <StockAlerts products={products} />}
+          {activeModule === "alerts" && (
+            <StockAlerts
+              products={products}
+              bottleDeposits={bottleDeposits}
+              setActiveModule={navigate}
+            />
+          )}
 
           {activeModule === "reports" && (
             <Reports products={products} transactions={transactions}
               purchaseOrders={purchaseOrders} suppliers={suppliers} />
           )}
 
-          {/* ── Accounts & Activity ── */}
           {activeModule === "activity" && (
-            <AccountsActivity currentUser={user} />
+            <AccountsActivity currentUser={currentUser} />
           )}
 
-          {/* ── Bottle Deposit Tracker ── */}
           {activeModule === "bottle-deposit" && (
             <BottleDeposit
               deposits={bottleDeposits}
               setDeposits={setBottleDeposits}
+              currentUser={currentUser}
+            />
+          )}
+
+          {/* ── My Profile ── */}
+          {activeModule === "profile" && (
+            <UserProfile
+              currentUser={currentUser}
+              onUserUpdate={handleUserUpdate}
             />
           )}
 
