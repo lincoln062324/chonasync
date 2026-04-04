@@ -28,6 +28,7 @@ const mapSupplier = (row) => ({
   onTimeDelivery: Number(row.on_time_delivery),
   deliveryTime:   row.delivery_time,
   totalOrders:    row.total_orders,
+  notes:          row.notes ?? "",          // ← supplier feedback/notes
 });
 
 const mapProduct = (row) => ({
@@ -133,6 +134,7 @@ export async function createSupplier(supplier) {
     on_time_delivery: supplier.onTimeDelivery ?? 100,
     delivery_time:    supplier.deliveryTime   ?? 3,
     total_orders:     supplier.totalOrders    ?? 0,
+    notes:            supplier.notes          ?? null,  // ← persist notes on create
   }).select().single();
   if (error) throw error;
   return mapSupplier(data);
@@ -145,6 +147,7 @@ export async function updateSupplier(id, changes) {
   if (changes.terms          !== undefined) payload.terms            = changes.terms;
   if (changes.rating         !== undefined) payload.rating           = changes.rating;
   if (changes.onTimeDelivery !== undefined) payload.on_time_delivery = changes.onTimeDelivery;
+  if (changes.notes          !== undefined) payload.notes            = changes.notes;  // ← save notes
   const { data, error } = await supabase.from("suppliers").update(payload).eq("id", id).select().single();
   if (error) throw error;
   return mapSupplier(data);
