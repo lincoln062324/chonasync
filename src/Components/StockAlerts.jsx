@@ -60,8 +60,8 @@ export default function StockAlerts({ products, bottleDeposits = [], setActiveMo
         <div
           className="alert-stat-card"
           style={{
-            borderColor: overdueDeposits.length > 0 ? "#fca5a5" : "#a7f3d0",
-            background: overdueDeposits.length > 0 ? "#fef2f2" : "#ecfdf5",
+            borderColor: overdueDeposits.length > 0 ? "#fca5a5" : "#98fcfc",
+            background: overdueDeposits.length > 0 ? "#fef2f2" : "#98fcfc7a",
             cursor: overdueDeposits.length > 0 ? "pointer" : "default",
           }}
           onClick={() => overdueDeposits.length > 0 && setActiveModule?.("bottle-deposit")}

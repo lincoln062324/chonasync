@@ -158,8 +158,8 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
             onClick={() => handleNav("profile")}
             style={{
               margin: "0 10px 8px", padding: "10px 12px",
-              background: activeModule === "profile" ? "#1e40af22" : "#1e293b",
-              borderRadius: 10, border: activeModule === "profile" ? "1.5px solid #3b82f680" : "1.5px solid transparent",
+              background: activeModule === "profile" ? "#b69778" : "#b69778",
+              borderRadius: 10, border: activeModule === "profile" ? "2px solid #faf5ef" : "1.5px solid transparent",
               display: "flex", alignItems: "center", gap: 10,
               cursor: "pointer", width: "calc(100% - 20px)",
               textAlign: "left", transition: "all 0.15s",
@@ -176,14 +176,14 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
                 width: 34, height: 34, borderRadius: "50%",
                 background: user.avatarColor || "#4f46e5",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 15, fontWeight: 800, color: "#fff", flexShrink: 0,
+                fontSize: 15, fontWeight: 800, color: "#faf5ef", flexShrink: 0,
                 border: "2px solid rgba(255,255,255,0.1)",
               }}>
                 {user.name.charAt(0).toUpperCase()}
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#faf5ef", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {user.name}
               </div>
               <span style={{
@@ -195,7 +195,7 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
               </span>
             </div>
             {/* Edit icon */}
-            <div style={{ fontSize: 12, color: "#475569", flexShrink: 0 }} title="Edit profile">✏️</div>
+            <div style={{ fontSize: 16, color: "#475569", flexShrink: 0 }} title="Edit profile">✏️</div>
           </button>
         )}
 
@@ -228,13 +228,13 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
               onClick={onLogout}
               style={{
                 marginTop: 10, width: "100%", padding: "7px 0", borderRadius: 8,
-                border: "1px solid #334155", background: "transparent",
-                color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                border: "1px solid #faf5efa6", background: "transparent",
+                color: "#faf5efa6", fontSize: 12, fontWeight: 600, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 transition: "all 0.15s", fontFamily: "'DM Sans', sans-serif",
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#1e293b"; e.currentTarget.style.color = "#f87171"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748b"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#faf5ef"; e.currentTarget.style.color = "#f87171"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#faf5efa6"; }}
             >
               🚪 Sign Out
             </button>

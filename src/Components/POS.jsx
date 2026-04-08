@@ -470,7 +470,7 @@ const outOfStock = products.filter(p => p.stock === 0);
 
         {/* ── E-Load: network filter pills ── */}
         {mode === "eloading" && (
-          <div className="eload-filter-tabs" style={{ marginBottom: 4 }}>
+          <div className="eload-filter-tabs" style={{ marginBottom: 4, marginTop: 4 }}>
             {eloadNetworks.map(n => (
               <button
                 key={n}
@@ -545,7 +545,7 @@ const outOfStock = products.filter(p => p.stock === 0);
                     </div>
                     <div className="pos-product-card__name">{lp.name}</div>
                     <div className="pos-product-card__price">₱{(+lp.denomination).toFixed(0)}</div>
-                    <div style={{ fontSize: 11, color: "var(--color-green)", fontWeight: 600, marginTop: 3 }}>
+                    <div style={{ fontSize: 11, color: "#065e35fb", fontWeight: 600, marginTop: 3 }}>
                       +₱{(+lp.profit).toFixed(2)} profit
                     </div>
                   </button>
@@ -680,7 +680,7 @@ const outOfStock = products.filter(p => p.stock === 0);
         {/* ── E-Load Cart ── */}
         {mode === "eloading" && (
           <>
-            <div className="cart-panel__header" style={{ background: "#f0fdf4" }}>
+            <div className="cart-panel__header" style={{ background: "var(--color-surface)" }}>
               <div className="cart-panel__header-title" style={{ color: "var(--color-green)" }}>
                 📱 Load Order
               </div>

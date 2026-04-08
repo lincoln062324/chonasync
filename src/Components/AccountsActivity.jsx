@@ -438,8 +438,8 @@ export default function AccountsActivity({ currentUser }) {
 
                   {/* Last activity */}
                   {accLogs[0] && (
-                    <div style={{ fontSize: 11, color: "#94a3b8", padding: "8px 0 0", borderTop: "1px solid #f1f5f9", marginTop: 8 }}>
-                      Last: <span style={{ color: "#64748b" }}>{accLogs[0].action.replace(/_/g, " ")}</span>
+                    <div style={{ fontSize: 11, color: "#b15b00c4", padding: "8px 0 0", borderTop: "1px solid #f1f5f9", marginTop: 8 }}>
+                      Last: <span style={{ color: "rgba(121, 63, 1, 0.9)" }}>{accLogs[0].action.replace(/_/g, " ")}</span>
                       {" · "}{timeAgo(accLogs[0].createdAt)}
                     </div>
                   )}

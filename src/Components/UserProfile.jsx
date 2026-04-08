@@ -545,7 +545,7 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
             {/* Color swatches */}
             {!photoFile && (
               <div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8,
+                <div style={{ fontSize: 11, color: "#44290d", marginBottom: 8,
                   fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                   Avatar Color
                 </div>
@@ -584,7 +584,7 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
                 maxLength={50}
               />
             </Field>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
+            <div style={{ fontSize: 11, color: "#c8b6a6", marginTop: 6 }}>
               This name is shown in the sidebar, login screen, and activity logs.
             </div>
           </div>
@@ -626,8 +626,8 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
               { label: "Session", value: "Active" },
             ].map(({ label, value }) => (
               <div key={label} className="profile-info-row">
-                <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{label}</span>
-                <span style={{ fontSize: 13, color: "#334155", fontWeight: 600 }}>{value}</span>
+                <span style={{ fontSize: 12, color: "#885620a4", fontWeight: 600 }}>{label}</span>
+                <span style={{ fontSize: 13, color: "#44290d", fontWeight: 600 }}>{value}</span>
               </div>
             ))}
 
@@ -635,18 +635,21 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
               onClick={openPinModal}
               style={{
                 marginTop: 14, width: "100%", padding: "10px 0", borderRadius: 9,
-                border: "1.5px dashed #cbd5e1", background: "#f8fafc",
-                color: "#475569", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                border: "1.5px #44290d2a", background: "#44290d",
+                color: "#faf5ef", fontSize: 12, fontWeight: 700, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                 transition: "all 0.15s",
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = avatarColor;
+                e.currentTarget.style.borderColor = "#44290d";
+                e.currentTarget.style.border = "2px solid";
                 e.currentTarget.style.color = avatarColor;
+                e.currentTarget.style.background = "transparent";
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = "#cbd5e1";
-                e.currentTarget.style.color = "#475569";
+                e.currentTarget.style.borderColor = "#44290d2a";
+                e.currentTarget.style.color = "#faf5ef";
+                e.currentTarget.style.background = "#44290d";
               }}
             >
               🔑 Change my PIN
@@ -660,7 +663,7 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
               <button
                 onClick={loadMyLogs}
                 title="Refresh"
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#94a3b8", lineHeight: 1 }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#44290d", lineHeight: 1 }}
               >↻</button>
             </div>
 
@@ -686,12 +689,12 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
                           {log.action.replace(/_/g, " ")}
                         </div>
                         {log.detail && (
-                          <div style={{ fontSize: 11, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <div style={{ fontSize: 11, color: "#44290d", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {log.detail}
                           </div>
                         )}
                       </div>
-                      <div style={{ fontSize: 10, color: "#cbd5e1", whiteSpace: "nowrap", flexShrink: 0 }}>
+                      <div style={{ fontSize: 10, color: "#885620f3", whiteSpace: "nowrap", flexShrink: 0 }}>
                         {timeAgo(log.createdAt)}
                       </div>
                     </div>
@@ -721,7 +724,7 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
               <AvatarDisplay user={{ ...currentUser, avatarColor }} size={40} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{currentUser?.name}</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                <div style={{ fontSize: 11, color: "#44290d" }}>
                   {pinStep === 1 ? "Enter a new 4-digit PIN" : "Confirm your new PIN"}
                 </div>
               </div>
@@ -732,7 +735,7 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
               {[1, 2].map(s => (
                 <div key={s} style={{
                   height: 4, flex: 1, borderRadius: 99,
-                  background: pinStep >= s ? (avatarColor || "#4f46e5") : "#e2e8f0",
+                  background: pinStep >= s ? (avatarColor || "#e59b46") : "#e2e8f0",
                   transition: "background 0.2s",
                 }} />
               ))}
@@ -766,10 +769,10 @@ export default function UserProfile({ currentUser, onUserUpdate }) {
 /* ─── Shared style objects ───────────────────────────────────────────────── */
 const S = {
   cardTitle: {
-    fontSize: 13, fontWeight: 700, color: "#475569",
+    fontSize: 13, fontWeight: 700, color: "#44290d",
     textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16,
   },
   logEmpty: {
-    textAlign: "center", padding: "20px 0", color: "#94a3b8", fontSize: 13,
+    textAlign: "center", padding: "20px 0", color: "#44290d", fontSize: 13,
   },
 };

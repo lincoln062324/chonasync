@@ -13,7 +13,7 @@ const SUPPLIER_CSS = `
 
   /* ── Supplier card ── */
   .supplier-card {
-    background: var(--color-surface);
+    background: #fff7ed;
     border: 1.5px solid var(--color-border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-card);
@@ -48,7 +48,7 @@ const SUPPLIER_CSS = `
   }
 
   .supplier-meta-item {
-    background: var(--color-bg);
+    background: #d670046b;
     border-radius: var(--radius-md);
     padding: 8px 10px;
   }
@@ -93,6 +93,8 @@ const SUPPLIER_CSS = `
     font-weight: 700;
     padding: 4px 10px;
     border-radius: var(--radius-full);
+    margin-top: 7px;
+    margin-bottom: -5px;
   }
 
   /* ── Notes section on card ── */
@@ -203,7 +205,7 @@ const SUPPLIER_CSS = `
     border-radius: var(--radius-lg);
     padding: 14px;
     font-size: 13px;
-    color: var(--color-text-secondary);
+    color: #44290d;
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
@@ -382,13 +384,13 @@ function NotesModal({ open, onClose, supplier, onSave }) {
           <>
             {/* Current note display */}
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#44290d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
                 Current Note
               </div>
               <div className="notes-modal-current">
                 {supplier?.notes
                   ? supplier.notes
-                  : <span style={{ color: "#94a3b8", fontStyle: "italic" }}>No note written yet. Click "Edit" to add one.</span>
+                  : <span style={{ color: "#44290d", fontStyle: "italic" }}>No note written yet. Click "Edit" to add one.</span>
                 }
               </div>
             </div>
@@ -403,7 +405,7 @@ function NotesModal({ open, onClose, supplier, onSave }) {
         ) : (
           <>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#44290d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
                 Edit Note
               </div>
               <textarea
@@ -416,7 +418,7 @@ function NotesModal({ open, onClose, supplier, onSave }) {
               />
               <div style={{
                 fontSize: 11, textAlign: "right", marginTop: 5,
-                color: over ? "#dc2626" : warn ? "#d97706" : "#94a3b8",
+                color: over ? "#dc2626" : warn ? "#d97706" : "#44290d",
                 fontWeight: over || warn ? 700 : 400,
               }}>
                 {draft.length}/{NOTE_MAX} characters
@@ -425,7 +427,7 @@ function NotesModal({ open, onClose, supplier, onSave }) {
 
             {/* Quick suggestion chips */}
             <div>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>Quick starters:</div>
+              <div style={{ fontSize: 11, color: "#44290d", marginBottom: 6 }}>Quick starters:</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {[
                   "✅ Reliable supplier.",

@@ -136,7 +136,7 @@ export default function App() {
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center",
         justifyContent:"center", height:"100vh", gap:16,
         fontFamily:"'DM Sans', sans-serif", background:"#f1f5f9" }}>
-        <div style={{ fontSize: 40 }}>📦</div>
+        <img src="/paw.png" alt="ChonaSync Logo" style={{ width:64, height:64, borderRadius:12 }} />
         <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>ChonaSync</div>
         <div style={{ fontSize: 13, color: "#64748b" }}>Connecting to database…</div>
       </div>
