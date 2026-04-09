@@ -11,14 +11,21 @@ const TABS = [
 export default function Reports({ products, transactions, purchaseOrders }) {
   const [tab, setTab] = useState("valuation");
 
+  // ── Split mixed transaction list into product-only vs eload ───────────────
+  // App.jsx merges both into one array; Reports must separate them to avoid
+  // crashes from mismatched item shapes (eload items have no productId/tax/subtotal).
+  const productTxns = transactions.filter(t => t.type !== "eloading");
+  const eloadTxns   = transactions.filter(t => t.type === "eloading");
+
   // ── Computed values ────────────────────────────────────────────────────────
   const inventoryValue  = products.reduce((s, p) => s + p.stock * p.cost,  0);
   const retailValue     = products.reduce((s, p) => s + p.stock * p.price, 0);
   const potentialProfit = retailValue - inventoryValue;
 
+  // Only use product transactions for per-product sold quantities
   const salesByProduct = products
     .map(p => {
-      const soldQty = transactions.reduce(
+      const soldQty = productTxns.reduce(
         (s, t) => s + (t.items.find(i => i.productId === p.id)?.qty || 0),
         0
       );
@@ -29,20 +36,39 @@ export default function Reports({ products, transactions, purchaseOrders }) {
   const fastMoving = salesByProduct.filter(p => p.soldQty > 0).slice(0, 5);
   const slowMoving = salesByProduct.filter(p => p.soldQty === 0);
 
-  const totalRevenue = transactions.reduce((s, t) => s + t.total, 0);
-  const avgTxn       = transactions.length ? (totalRevenue / transactions.length).toFixed(0) : 0;
+  // Revenue across all transaction types
+  const totalRevenue     = transactions.reduce((s, t) => s + (Number(t.total) || 0), 0);
+  const productRevenue   = productTxns.reduce((s, t) => s + (Number(t.total) || 0), 0);
+  const eloadRevenue     = eloadTxns.reduce((s, t) => s + (Number(t.total) || 0), 0);
+  const avgTxn           = productTxns.length
+    ? (productRevenue / productTxns.length).toFixed(0)
+    : 0;
 
-  // ── Movement rows (sales + received POs) ──────────────────────────────────
+  // ── Movement rows: only product sales + received POs (eloads don't move stock)
   const movementRows = [
-    ...transactions.flatMap(t =>
-      t.items.map(it => ({ date: t.date, type: "Sale", ref: t.id.toUpperCase(), product: it.name, qty: it.qty, dir: "out" }))
+    ...productTxns.flatMap(t =>
+      (t.items || []).map(it => ({
+        date:    t.date,
+        type:    "Sale",
+        ref:     String(t.id).slice(0, 8).toUpperCase(),
+        product: it.name || "—",
+        qty:     it.qty,
+        dir:     "out",
+      }))
     ),
     ...purchaseOrders
       .filter(p => p.status === "received")
       .flatMap(po =>
-        po.items.map(it => {
+        (po.items || []).map(it => {
           const prod = products.find(p => p.id === it.productId);
-          return { date: po.receivedDate || po.date, type: "Purchase", ref: po.id.toUpperCase(), product: prod?.name || it.productId, qty: it.qty, dir: "in" };
+          return {
+            date:    po.receivedDate || po.date,
+            type:    "Purchase",
+            ref:     String(po.id).slice(0, 8).toUpperCase(),
+            product: prod?.name || it.productId,
+            qty:     it.qty,
+            dir:     "in",
+          };
         })
       ),
   ].sort((a, b) => b.date.localeCompare(a.date));
@@ -113,26 +139,41 @@ export default function Reports({ products, transactions, purchaseOrders }) {
       {tab === "sales" && (
         <>
           <div className="stat-grid">
-            <StatCard label="Total Revenue"    value={`₱${totalRevenue.toLocaleString()}`} icon="pos"   color="#4f46e5" bg="#eef2ff" />
-            <StatCard label="Transactions"     value={transactions.length}                  icon="chart" color="#059669" bg="#ecfdf5" />
-            <StatCard label="Avg. Transaction" value={`₱${avgTxn}`}                        icon="star"  color="#d97706" bg="#fffbeb" />
+            <StatCard label="Total Revenue"    value={`₱${totalRevenue.toLocaleString()}`}   icon="pos"   color="#4f46e5" bg="#eef2ff" />
+            <StatCard label="Product Sales"    value={`₱${productRevenue.toLocaleString()}`} icon="box"   color="#059669" bg="#ecfdf5" />
+            <StatCard label="E-Load Sales"     value={`₱${eloadRevenue.toLocaleString()}`}   icon="chart" color="#0891b2" bg="#ecfeff" />
+            <StatCard label="Avg. Transaction" value={`₱${avgTxn}`}                          icon="star"  color="#d97706" bg="#fffbeb" />
           </div>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
-                <tr>{["Transaction","Date","Items","Subtotal","Tax","Discount","Total","Method"].map(h => <th key={h}>{h}</th>)}</tr>
+                <tr>{["Transaction","Date","Type","Items","Subtotal","Tax","Discount","Total","Method"].map(h => <th key={h}>{h}</th>)}</tr>
               </thead>
               <tbody>
-                {transactions.map(t => (
+                {productTxns.map(t => (
                   <tr key={t.id}>
-                    <td className="td-id">{t.id.toUpperCase()}</td>
+                    <td className="td-id">{String(t.id).slice(0, 8).toUpperCase()}</td>
                     <td>{t.date}</td>
-                    <td>{t.items.length} items</td>
-                    <td>₱{t.subtotal.toFixed(2)}</td>
-                    <td>₱{t.tax.toFixed(2)}</td>
-                    <td>{t.discount > 0 ? `₱${t.discount}` : "—"}</td>
-                    <td className="td-price">₱{t.total.toFixed(2)}</td>
-                    <td><Badge color="blue">Cash</Badge></td>
+                    <td><Badge color="blue">Product</Badge></td>
+                    <td>{(t.items || []).length} items</td>
+                    <td>₱{(Number(t.subtotal) || 0).toFixed(2)}</td>
+                    <td>₱{(Number(t.tax)      || 0).toFixed(2)}</td>
+                    <td>{(Number(t.discount) || 0) > 0 ? `₱${Number(t.discount).toFixed(2)}` : "—"}</td>
+                    <td className="td-price">₱{(Number(t.total) || 0).toFixed(2)}</td>
+                    <td><Badge color="blue">{t.method || "cash"}</Badge></td>
+                  </tr>
+                ))}
+                {eloadTxns.map(t => (
+                  <tr key={t.id}>
+                    <td className="td-id">{String(t.id).slice(0, 8).toUpperCase()}</td>
+                    <td>{t.date}</td>
+                    <td><Badge color="cyan">E-Load</Badge></td>
+                    <td>{(t.items || []).length} items</td>
+                    <td>₱{(Number(t.subtotal) || 0).toFixed(2)}</td>
+                    <td>—</td>
+                    <td>{(Number(t.discount) || 0) > 0 ? `₱${Number(t.discount).toFixed(2)}` : "—"}</td>
+                    <td className="td-price">₱{(Number(t.total) || 0).toFixed(2)}</td>
+                    <td><Badge color="blue">{t.method || "cash"}</Badge></td>
                   </tr>
                 ))}
               </tbody>

@@ -48,7 +48,7 @@ const SUPPLIER_CSS = `
   }
 
   .supplier-meta-item {
-    background: #d670046b;
+    background: #dc262628;
     border-radius: var(--radius-md);
     padding: 8px 10px;
   }

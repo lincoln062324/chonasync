@@ -158,8 +158,8 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
             onClick={() => handleNav("profile")}
             style={{
               margin: "0 10px 8px", padding: "10px 12px",
-              background: activeModule === "profile" ? "#b69778" : "#b69778",
-              borderRadius: 10, border: activeModule === "profile" ? "2px solid #faf5ef" : "1.5px solid transparent",
+              background: activeModule === "profile" ? "#ff94947e" : "#ff94947e",
+              borderRadius: 10, border: activeModule === "profile" ? "2px solid #ff9494c9" : "1.5px solid transparent",
               display: "flex", alignItems: "center", gap: 10,
               cursor: "pointer", width: "calc(100% - 20px)",
               textAlign: "left", transition: "all 0.15s",

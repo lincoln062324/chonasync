@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react";
 const PIN_LENGTH = 4;
 
 const AVATAR_COLORS = [
-  "#4f46e5","#059669","#dc2626","#d97706","#7c3aed",
-  "#0891b2","#c2410c","#065f46","#1d4ed8","#9333ea",
+  "#dc2626","#b45309","#d97706","#7f1d1d","#92400e",
+  "#ea580c","#059669","#0891b2","#7c3aed","#1d4ed8",
 ];
 
 const ROLES = ["cashier", "staff", "admin", "owner"];
@@ -145,19 +145,19 @@ export default function Login({ onLogin }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f172a 100%)",
+      background: "linear-gradient(135deg, #1c0505 0%, #7f1d1d 45%, #92400e 100%)",
       fontFamily: "'DM Sans', sans-serif", padding: "20px 0",
     }}>
       {/* Grid bg */}
       <div style={{
         position: "fixed", inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(#818cf8 1px, transparent 1px), linear-gradient(90deg, #818cf8 1px, transparent 1px)",
+        backgroundImage: "linear-gradient(#f59e0b 1px, transparent 1px), linear-gradient(90deg, #f59e0b 1px, transparent 1px)",
         backgroundSize: "40px 40px", pointerEvents: "none",
       }} />
 
       <div style={{
         position: "relative", zIndex: 1,
-        background: "#fff", borderRadius: 20, padding: "32px 28px 28px",
+        background: "#fffbf0", borderRadius: 20, padding: "32px 28px 28px",
         width: "100%", maxWidth: 390,
         boxShadow: "0 32px 80px rgba(0,0,0,0.45)",
         animation: shake ? "shake 0.4s ease" : "none",
@@ -319,7 +319,7 @@ export default function Login({ onLogin }) {
                     onChange={e => setNewName(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter" && newName.trim()) { setCreateErr(""); setPinStep(1); } }}
                     style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e2e8f0", fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: "none", boxSizing: "border-box" }}
-                    onFocus={e => e.currentTarget.style.borderColor = newColor}
+                    onFocus={e => e.currentTarget.style.borderColor = newColor || "#f59e0b"}
                     onBlur={e => e.currentTarget.style.borderColor = "#e2e8f0"}
                   />
                 </div>
@@ -362,7 +362,7 @@ export default function Login({ onLogin }) {
               /* ── Step 1 & 2: PIN ── */
               <>
                 {/* Profile recap */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, padding: "10px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, padding: "10px 14px", background: "#fff9e6", borderRadius: 12, border: "1px solid #fcd34d" }}>
                   {photoPreview ? (
                     <img src={photoPreview} alt={newName} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: `2px solid ${newColor}`, flexShrink: 0 }} />
                   ) : (
@@ -406,7 +406,7 @@ export default function Login({ onLogin }) {
 
       <style>{`
         @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
-        ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+        ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#fca5a5;border-radius:99px}
       `}</style>
     </div>
   );

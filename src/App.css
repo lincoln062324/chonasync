@@ -5,33 +5,38 @@
    Font: Sora (headings) + DM Sans (body)
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ─── CSS VARIABLES ───────────────────────────────────────── */
 :root {
-  --color-bg:          #faf5ef;
-  --color-surface:     #c8b6a6;
-  --color-border:      #b15b006b;
-  --color-border-soft: #d670046b;
+  /* ── Core palette: Golden Ember ── */
+  --color-bg:          #fffbf0;
+  --color-surface:     #fff3d0;
+  --color-border:      #f59e0b66;
+  --color-border-soft: #fcd34d44;
 
-  --color-text-primary:   #44290d;
-  --color-text-secondary: #44290d;
-  --color-text-muted:     #885620;
+  --color-text-primary:   #1a0a00;
+  --color-text-secondary: #3d1a00;
+  --color-text-muted:     #92400e;
 
-  --color-indigo:       #44290d;
-  --color-indigo-light: #88562062;
-  --color-indigo-mid:   #885620;
+  /* Primary: deep amber / gold — replaces "indigo" role */
+  --color-indigo:       #b45309;
+  --color-indigo-light: #fef3c7;
+  --color-indigo-mid:   #d97706;
 
-  --color-green:        #44290d;
-  --color-green-light:  #faf5ef;
-  --color-green-border: #a7f3d0;
+  /* Success: keep green tones but warmer */
+  --color-green:        #065f46;
+  --color-green-light:  #d1fae5;
+  --color-green-border: #6ee7b7;
 
+  /* Danger: vivid crimson red */
   --color-red:          #dc2626;
   --color-red-light:    #fef2f2;
-  --color-red-border:   #fecaca;
+  --color-red-border:   #fca5a5;
 
+  /* Warning / accent: golden yellow */
   --color-yellow:       #d97706;
-  --color-yellow-light: #f8b398;
+  --color-yellow-light: #fef9ee;
   --color-yellow-border:#fde68a;
 
   --color-blue:         #1d4ed8;
@@ -43,15 +48,15 @@
   --color-cyan:         #0891b2;
   --color-cyan-light:   #ecfeff;
 
-  --color-orange:       #c2410c;
+  --color-orange:       #ea580c;
   --color-orange-light: #fff7ed;
 
-  /* Sidebar */
-  --sidebar-bg:        	#44290d;
-  --sidebar-hover:      #88745f;
-  --sidebar-active:     #b69778;
-  --sidebar-text:       #faf5efa6;
-  --sidebar-active-text:#faf5ef;
+  /* Sidebar: rich crimson-red */
+  --sidebar-bg:         #7f1d1d;
+  --sidebar-hover:      #991b1b;
+  --sidebar-active:     #dc2626;
+  --sidebar-text:       #fecaca99;
+  --sidebar-active-text:#fff7f7;
 
   /* Radii */
   --radius-sm:  6px;
@@ -61,10 +66,10 @@
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-card:   0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(29, 26, 26, 0.616);
-  --shadow-modal:  0 25px 60px rgba(255, 145, 0, 0.116);
-  --shadow-focus:  0 0 0 3px #b15b0023;
-  --shadow-hover:  0 4px 12px rgba(79,70,229,0.12);
+  --shadow-card:   0 1px 3px rgba(180,83,9,0.10), 0 1px 2px rgba(220,38,38,0.08);
+  --shadow-modal:  0 25px 60px rgba(180,83,9,0.18);
+  --shadow-focus:  0 0 0 3px #f59e0b40;
+  --shadow-hover:  0 4px 12px rgba(220,38,38,0.14);
 
   /* Transitions */
   --transition: all 0.15s ease;
@@ -74,7 +79,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   background: var(--color-bg);
   color: var(--color-text-primary);
   min-height: 100vh;
@@ -82,7 +87,7 @@ body {
 }
 
 h1, h2, h3, h4 {
-  font-family: 'Sora', system-ui, sans-serif;
+  font-family: 'Playfair Display', serif;
   line-height: 1.2;
 }
 
@@ -124,7 +129,7 @@ button { font-family: inherit; }
 
 .sidebar__brand {
   padding: 26px 20px 20px;
-  border-bottom: 1px solid #c8b6a6;
+  border-bottom: 1px solid #b91c1c50;
   margin-bottom: 8px;
 }
 .logopaw{
@@ -135,10 +140,10 @@ button { font-family: inherit; }
 }
 
 .sidebar__brand-name {
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
   font-size: 17px;
   font-weight: 800;
-  color: #faf5ef;
+  color: #fff7f7;
   letter-spacing: -0.02em;
   display: flex;
   align-items: center;
@@ -148,7 +153,7 @@ button { font-family: inherit; }
 
 .sidebar__brand-sub {
   font-size: 11px;
-  color: #faf5ef;
+  color: #fff7f7;
   margin-top: 3px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -176,13 +181,13 @@ button { font-family: inherit; }
   font-size: 13px;
   transition: var(--transition);
   position: relative;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   text-align: left;
 }
 
 .sidebar__nav-item:hover {
   background: var(--sidebar-hover);
-  color: #faf5ef;
+  color: #fff7f7;
 }
 
 .sidebar__nav-item--active {
@@ -205,18 +210,18 @@ button { font-family: inherit; }
 
 .sidebar__footer {
   padding: 14px 20px;
-  border-top: 1px solid #faf5efa6;
+  border-top: 1px solid #fca5a540;
 }
 
 .sidebar__footer-store {
   font-size: 12px;
-  color: #faf5efa6;
+  color: #fecaca90;
   font-weight: 600;
 }
 
 .sidebar__footer-version {
   font-size: 10px;
-  color: #faf5efa6;
+  color: #fecaca90;
   margin-top: 2px;
 }
 
@@ -275,7 +280,7 @@ button { font-family: inherit; }
 }
 
 .stat-card__value {
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
   font-size: 17px;
   font-weight: 800;
   color: var(--color-text-primary);
@@ -296,7 +301,7 @@ button { font-family: inherit; }
 
 /* ─── CARDS & PANELS ──────────────────────────────────────── */
 .card {
-  background: #ffffff;
+  background: #fffefb;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
@@ -309,9 +314,9 @@ button { font-family: inherit; }
 .card__title {
   font-size: 14px;
   font-weight: 700;
-  color: #44290d;
+  color: var(--color-indigo);
   margin-bottom: 16px;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .two-col-grid {
@@ -328,7 +333,7 @@ button { font-family: inherit; }
 
 /* ─── TABLE ───────────────────────────────────────────────── */
 .table-wrap {
-  background: #ffffff;
+  background: #fffefb;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -343,7 +348,7 @@ button { font-family: inherit; }
 }
 
 .data-table thead tr {
-  background: #ffffff;
+  background: #fffefb;
 }
 
 .data-table th {
@@ -370,11 +375,11 @@ button { font-family: inherit; }
 }
 
 .data-table tbody tr:nth-child(even) {
-  background: #ffffff;
+  background: #fffefb;
 }
 
 .data-table tbody tr:hover {
-  background: #c8b6a621;
+  background: #fef9ee;
 }
 
 .table-empty {
@@ -412,6 +417,7 @@ button { font-family: inherit; }
 .badge--blue   { background: var(--color-blue-light); color: var(--color-blue); }
 .badge--gray   { background: #f3f4f6; color: #374151; }
 .badge--orange { background: #fed7aa; color: #9a3412; }
+.badge--cyan   { background: #cffafe; color: #0e7490; }
 .badge--purple { background: #ede9fe; color: #5b21b6; }
 
 /* ─── BUTTONS ─────────────────────────────────────────────── */
@@ -421,7 +427,7 @@ button { font-family: inherit; }
   justify-content: center;
   gap: 6px;
   border-radius: var(--radius-md);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
@@ -447,13 +453,13 @@ button { font-family: inherit; }
   border: none;
 }
 .btn--primary:hover:not(:disabled) {
-  background: #c8b6a6;
-  box-shadow: 0 4px 14px #aa5c175b;
+  background: var(--color-surface);
+  box-shadow: 0 4px 14px rgba(220,38,38,0.35);
   transform: translateY(-1px);
 }
 
 .btn--secondary {
-  background: #f8fafc;
+  background: #fffbf0;
   color: #374151;
   border: 1.5px solid var(--color-border);
 }
@@ -521,9 +527,9 @@ button { font-family: inherit; }
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 14px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   color: var(--color-text-primary);
-  background: #ffff;
+  background: #fffefb;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -596,7 +602,7 @@ button { font-family: inherit; }
 
 .modal__header {
   padding: 20px 24px 16px;
-  border-bottom: 1px solid #44290d;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -610,7 +616,7 @@ button { font-family: inherit; }
   font-size: 17px;
   font-weight: 700;
   color: var(--color-text-primary);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .modal__close {
@@ -749,7 +755,7 @@ button { font-family: inherit; }
   background: transparent;
   cursor: pointer;
   margin-bottom: 2px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -764,7 +770,7 @@ button { font-family: inherit; }
 
 .cat-item--active {
   background: var(--color-indigo-light);
-  border-color: var(--color-indigo-mid);
+  border-color: var(--color-indigo);
   color: var(--color-indigo);
   font-weight: 700;
 }
@@ -814,7 +820,7 @@ button { font-family: inherit; }
 .cat-banner__name {
   font-size: 15px;
   font-weight: 800;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .cat-banner__sub {
@@ -854,7 +860,7 @@ button { font-family: inherit; }
 }
 
 .supplier-card {
-  background: #c8b6a6;
+  background: var(--color-surface);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 20px;
@@ -877,7 +883,7 @@ button { font-family: inherit; }
 .supplier-card__name {
   font-weight: 800;
   font-size: 15px;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .supplier-card__contact {
@@ -894,7 +900,7 @@ button { font-family: inherit; }
 }
 
 .supplier-meta-item {
-  background: #f8fafc;
+  background: #fffbf0;
   border-radius: var(--radius-md);
   padding: 8px 10px;
 }
@@ -1015,7 +1021,7 @@ button { font-family: inherit; }
 /* Rating picker area inside the modal */
 .modal-rating-wrap {
   padding: 12px 14px;
-  background: #f8fafc;
+  background: #fffbf0;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -1050,7 +1056,7 @@ button { font-family: inherit; }
 }
 
 .alert-stat-card__num {
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
   font-size: 40px;
   font-weight: 800;
   line-height: 1;
@@ -1093,8 +1099,8 @@ button { font-family: inherit; }
   margin-bottom: 20px;
 }
 
-.alert-panel--red    { background: var(--color-surface); border: 1.5px solid var(--color-red-border); }
-.alert-panel--yellow { background: var(--color-surface); border: 1.5px solid var(--color-yellow-border); }
+.alert-panel--red    { background: #fff5f5; border: 1.5px solid var(--color-red-border); }
+.alert-panel--yellow { background: #fffbf0; border: 1.5px solid var(--color-yellow-border); }
 
 .alert-panel-row {
   display: flex;
@@ -1150,7 +1156,7 @@ button { font-family: inherit; }
   display: flex;
   gap: 4px;
   margin-bottom: 20px;
-  background: #f8fafc;
+  background: #fffbf0;
   border-radius: 10px;
   padding: 4px;
   border: 1.5px solid var(--color-border);
@@ -1163,7 +1169,7 @@ button { font-family: inherit; }
   border-radius: var(--radius-md);
   font-size: 13px;
   font-weight: 600;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
   background: transparent;
   color: var(--color-text-muted);
@@ -1187,8 +1193,8 @@ button { font-family: inherit; }
 .rank-badge {
   width: 28px;
   height: 28px;
-  background: var(--color-green-light);
-  color: var(--color-green);
+  background: var(--color-yellow-light);
+  color: var(--color-indigo);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -1240,7 +1246,7 @@ button { font-family: inherit; }
   text-align: left;
   transition: var(--transition);
   position: relative;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .pos-product-card:hover {
@@ -1269,7 +1275,7 @@ button { font-family: inherit; }
   font-size: 15px;
   font-weight: 800;
   color: var(--color-indigo);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .pos-product-card__stock {
@@ -1284,17 +1290,17 @@ button { font-family: inherit; }
 
 .pos-product-card__stock--low {
   background: var(--color-yellow-light);
-  color: #44290d;
+  color: var(--color-indigo);
 }
 
 .pos-product-card__stock--ok {
   background: var(--color-green-light);
-  color: #44290d;
+  color: var(--color-indigo);
 }
 
 /* Cart Panel */
 .cart-panel {
-  background: #faf5ef;
+  background: var(--color-bg);
   border: 1.5px solid var(--color-border);
   border-radius: 16px;
   display: flex;
@@ -1313,7 +1319,7 @@ button { font-family: inherit; }
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text-primary);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .cart-panel__header-sub {
@@ -1415,7 +1421,7 @@ button { font-family: inherit; }
 .checkout-panel {
   padding: 14px 16px;
   border-top: 1.5px solid var(--color-border-soft);
-  background: #fafafa;
+  background: #fffbf0;
 }
 
 .checkout-row {
@@ -1439,7 +1445,7 @@ button { font-family: inherit; }
   padding-top: 10px;
   border-top: 1.5px solid var(--color-border);
   margin-bottom: 12px;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .checkout-total__amount { color: var(--color-indigo); }
@@ -1494,7 +1500,7 @@ button { font-family: inherit; }
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .pos-mode-tab:hover {
@@ -1528,13 +1534,13 @@ button { font-family: inherit; }
   padding: 5px 12px;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--color-border);
-  background: #fff7f0;
+  background: #fff9e6;
   color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .eload-filter-tab:hover {
@@ -1544,7 +1550,7 @@ button { font-family: inherit; }
 
 .eload-filter-tab--active {
   background: var(--color-indigo-light);
-  border-color: var(--color-indigo-mid);
+  border-color: var(--color-indigo);
   color: var(--color-indigo);
 }
 
@@ -1613,7 +1619,7 @@ button { font-family: inherit; }
 
 /* E-Loading Management: modal preview box */
 .eload-preview-box {
-  background: #f8fafc;
+  background: #fffbf0;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 12px 14px;
@@ -1685,13 +1691,13 @@ button { font-family: inherit; }
   font-weight: 800;
   font-size: 16px;
   color: var(--color-green);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .receipt-id { color: var(--color-text-muted); font-size: 13px; }
 
 .receipt-items {
-  background: #f8fafc;
+  background: #fffbf0;
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 16px;
@@ -1740,7 +1746,7 @@ button { font-family: inherit; }
 }
 
 .po-total-bar {
-  background: #f8fafc;
+  background: #fffbf0;
   border-radius: var(--radius-md);
   padding: 12px 16px;
   margin-bottom: 16px;
@@ -1754,8 +1760,8 @@ button { font-family: inherit; }
 /* ─── SCROLLBARS ──────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: #fca5a5; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #dc2626; }
 
 /* ─── UTILITIES ───────────────────────────────────────────── */
 .mt-8  { margin-top: 8px; }
@@ -1788,7 +1794,7 @@ button { font-family: inherit; }
 .gap-16        { gap: 16px; }
 
 sidebar__brand-logo {
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
   font-size: 18px;
   font-weight: 800;
   color: var(--color-indigo);
@@ -1818,7 +1824,7 @@ sidebar__brand-logo {
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   transition: var(--transition);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .sh-tab:hover { color: var(--color-text-primary); }
@@ -1849,8 +1855,8 @@ sidebar__brand-logo {
 
 /* Expandable table rows */
 .sh-row { transition: background 0.1s; }
-.sh-row:hover { background: #f8fafc !important; }
-.sh-row--expanded { background: #f0f4ff !important; }
+.sh-row:hover { background: #fff9e6 !important; }
+.sh-row--expanded { background: #fff3d0 !important; }
 
 .sh-expand-icon {
   font-size: 10px;
@@ -1863,7 +1869,7 @@ sidebar__brand-logo {
 .sh-items-row td { padding: 0 !important; }
 
 .sh-items-panel {
-  background: #f8fafc;
+  background: #fffbf0;
   border-top: 1.5px solid var(--color-border-soft);
   border-bottom: 1.5px solid var(--color-border-soft);
   padding: 14px 20px 14px 48px;
@@ -1949,7 +1955,7 @@ sidebar__brand-logo {
 .stat-card--clickable:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(79, 70, 229, 0.12);
-  border-color: var(--color-indigo-mid);
+  border-color: var(--color-indigo);
 }
 
 /* Nav hint shown inside stat cards */
@@ -2021,7 +2027,7 @@ sidebar__brand-logo {
   font-size: 13px;
   font-weight: 800;
   color: var(--color-text-primary);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 /* ================================================================
@@ -2064,7 +2070,7 @@ sidebar__brand-logo {
 }
 
 .mobile-topbar__brand {
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
   font-size: 15px;
   font-weight: 800;
   color: var(--color-text-primary);
@@ -2170,7 +2176,7 @@ sidebar__brand-logo {
   justify-content: center;
   border: 1.5px solid #fff;
   line-height: 1;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
   animation: badgePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -2215,7 +2221,7 @@ sidebar__brand-logo {
   font-size: 14px;
   font-weight: 800;
   color: #fff;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 /* ─── MOBILE PROFILE DROPDOWN ─────────────────────────────────── */
@@ -2250,7 +2256,7 @@ sidebar__brand-logo {
   align-items: center;
   gap: 12px;
   padding: 16px 14px;
-  background: #f8fafc;
+  background: #fffbf0;
 }
 
 .mobile-profile-dropdown__avatar {
@@ -2264,14 +2270,14 @@ sidebar__brand-logo {
   font-weight: 800;
   color: #fff;
   flex-shrink: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .mobile-profile-dropdown__name {
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text-primary);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Playfair Display', serif;
   line-height: 1.2;
   margin-bottom: 4px;
 }
@@ -2301,7 +2307,7 @@ sidebar__brand-logo {
   color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   cursor: pointer;
   text-align: left;
   transition: background 0.12s;
@@ -3371,7 +3377,7 @@ sidebar__brand-logo {
     font-size: 14px;
     font-weight: 700;
     color: var(--color-text-primary);
-    font-family: 'Sora', sans-serif;
+    font-family: 'Playfair Display', serif;
     line-height: 1.3;
   }
 
@@ -3406,7 +3412,7 @@ sidebar__brand-logo {
     font-size: 15px;
     font-weight: 800;
     color: var(--color-text-primary);
-    font-family: 'Sora', sans-serif;
+    font-family: 'Playfair Display', serif;
     line-height: 1;
   }
 
@@ -3580,7 +3586,7 @@ sidebar__brand-logo {
 }
 
 .deposit-badge--inactive {
-  background: #f8fafc;
+  background: #fffbf0;
   color: #94a3b8;
 }
 
@@ -3638,4 +3644,375 @@ sidebar__brand-logo {
   font-size: 11px;
   color: #d97706;
   margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GOLDEN EMBER THEME — Yellow × Red Enhancements
+   ════════════════════════════════════════════════════════════ */
+
+/* Body gets a warm grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 0%, #fef3c730 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 100%, #fee2e220 0%, transparent 60%);
+}
+
+/* Sidebar: deeper red with subtle texture stripe */
+.sidebar {
+  background: linear-gradient(180deg, #7f1d1d 0%, #6b1111 60%, #450a0a 100%);
+  border-right: 2px solid #dc262620;
+}
+
+.sidebar__brand {
+  border-bottom: 1px solid #fca5a530;
+  padding-bottom: 16px;
+  margin-bottom: 10px;
+}
+
+.sidebar__brand-name {
+  color: #fef2f2;
+  font-size: 18px;
+}
+
+.sidebar__brand-sub {
+  color: #fca5a590;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+/* Nav items — amber glow on active */
+.sidebar__nav-item--active {
+  background: linear-gradient(90deg, #dc2626, #b91c1c);
+  box-shadow: 0 2px 12px rgba(220,38,38,0.45);
+  color: #fff;
+  font-weight: 700;
+}
+
+.sidebar__nav-item:hover {
+  background: rgba(220,38,38,0.25);
+  color: #fef2f2;
+}
+
+/* Page header title — elegant serif */
+.page-header__title {
+  font-size: 24px;
+  background: linear-gradient(135deg, #92400e, #dc2626);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+
+/* Stat cards: warm cream with amber top border accent */
+.stat-card {
+  border-top: 3px solid #f59e0b;
+  background: linear-gradient(145deg, #fffefb, #fff9e6);
+}
+
+.stat-card:nth-child(2n) {
+  border-top-color: #dc2626;
+}
+
+.stat-card:nth-child(3n) {
+  border-top-color: #b45309;
+}
+
+.stat-card__value {
+  font-size: 20px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #92400e, #dc2626);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Primary button: bold red-to-amber gradient */
+.btn--primary {
+  background: linear-gradient(135deg, #dc2626, #b45309);
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.30);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c, #92400e);
+  box-shadow: 0 4px 16px rgba(220,38,38,0.40);
+  transform: translateY(-1px);
+}
+
+/* Secondary button */
+.btn--secondary {
+  background: #fff9e6;
+  color: #92400e;
+  border: 1.5px solid #fcd34d;
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+/* Table header: warm amber stripe */
+.data-table thead tr {
+  background: linear-gradient(90deg, #fff9e6, #fffbf0);
+  border-bottom: 2px solid #f59e0b40;
+}
+
+.data-table th {
+  color: #92400e;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+/* Table row hover */
+.data-table tbody tr:hover {
+  background: #fff9e6 !important;
+}
+
+/* Report tab active */
+.report-tab--active {
+  background: linear-gradient(135deg, #dc2626, #b45309);
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.28);
+}
+
+/* Modal: warm cream with red header accent */
+.modal {
+  background: #fffbf0;
+  border: 1.5px solid #fcd34d50;
+}
+
+.modal__header {
+  background: linear-gradient(135deg, #7f1d1d, #92400e);
+  border-bottom: none;
+}
+
+.modal__title {
+  color: #fff7f7;
+}
+
+.modal__close {
+  color: #fca5a5;
+}
+
+.modal__close:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+/* POS product card hover */
+.pos-product-card:hover {
+  border-color: #dc2626;
+  box-shadow: 0 4px 16px rgba(220,38,38,0.14);
+}
+
+.pos-product-card__price {
+  color: #dc2626;
+  font-weight: 900;
+}
+
+/* Cart panel */
+.cart-panel {
+  background: linear-gradient(180deg, #fffbf0, #fff9e6);
+  border: 1.5px solid #f59e0b40;
+}
+
+.cart-panel__header {
+  background: linear-gradient(135deg, #7f1d1d, #92400e);
+  border-bottom: none;
+}
+
+.cart-panel__header-title {
+  color: #fff7f7;
+}
+
+.cart-panel__header-sub {
+  color: #fca5a5;
+}
+
+/* Checkout total amount */
+.checkout-total__amount {
+  color: #dc2626;
+}
+
+/* Qty buttons */
+.qty-btn:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+/* Badge: primary becomes amber-gold */
+.badge--blue {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Input focus: amber glow */
+.input:focus,
+.select:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px #f59e0b35;
+}
+
+/* Dashboard section cards */
+.card {
+  background: linear-gradient(145deg, #fffefb, #fff9e6);
+  border: 1.5px solid #f59e0b30;
+}
+
+.card__title {
+  color: #7f1d1d;
+  font-size: 15px;
+}
+
+/* Mobile topbar */
+.mobile-topbar {
+  background: linear-gradient(90deg, #7f1d1d, #92400e);
+  border-bottom: 2px solid #dc262640;
+}
+
+.mobile-topbar__brand {
+  color: #fff7f7;
+}
+
+.hamburger-btn {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.hamburger-btn span {
+  background: #fef2f2;
+}
+
+.hamburger-btn--open span:nth-child(1),
+.hamburger-btn--open span:nth-child(3) {
+  background: #fef2f2;
+}
+
+/* Top product rank badge */
+.top-product__rank {
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 800;
+}
+
+/* Top product rev */
+.top-product__rev {
+  color: #dc2626;
+}
+
+/* POS mode tab active */
+.pos-mode-tab--active {
+  background: linear-gradient(135deg, #dc2626, #b45309);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(220,38,38,0.25);
+}
+
+/* sh-tab active */
+.sh-tab--active {
+  color: #dc2626;
+  border-bottom-color: #dc2626;
+}
+
+/* tbl icon btn hover */
+.tbl-icon-btn:hover {
+  border-color: #f59e0b;
+  color: #b45309;
+  background: #fef3c7;
+}
+
+/* Stat card clickable hover */
+.stat-card--clickable:hover {
+  box-shadow: 0 6px 20px rgba(220,38,38,0.14);
+  border-color: #dc2626;
+  transform: translateY(-2px);
+}
+
+/* cat-item active */
+.cat-item--active {
+  background: linear-gradient(135deg, #fef3c7, #fee2e2);
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+/* eload filter tab active */
+.eload-filter-tab--active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+/* receipt icon */
+.receipt-icon {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* receipt title */
+.receipt-title {
+  color: #b45309;
+}
+
+/* po total bar */
+.po-total-bar strong {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+/* dash-see-all link */
+.dash-see-all {
+  color: #dc2626;
+}
+
+/* Stock progress fill */
+.stock-progress__fill {
+  background: linear-gradient(90deg, #dc2626, #f59e0b);
+}
+
+.stock-progress__bar {
+  background: #fee2e2;
+}
+
+/* Supplier card */
+.supplier-card {
+  background: linear-gradient(145deg, #fffefb, #fff9e6);
+  border-top: 3px solid #f59e0b;
+}
+
+/* Alert stat cards update */
+.alert-stat-card--yellow .alert-stat-card__num { color: #d97706; }
+.alert-stat-card--green .alert-stat-card__num  { color: #065f46; }
+
+/* Eload profit summary */
+.eload-profit-summary {
+  background: #fff9e6;
+  border-color: #fcd34d;
+}
+
+/* eload preview box */
+.eload-preview-box {
+  background: #fff9e6;
+  border-color: #f59e0b;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar-thumb {
+  background: #fca5a5;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+}
+
+/* Analysis rank badge (override) */
+.rank-badge {
+  background: #fef3c7;
+  color: #b45309;
 }
