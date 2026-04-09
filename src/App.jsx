@@ -25,7 +25,8 @@ import Reports              from "./Components/Reports";
 import SalesHistory         from "./Components/SalesHistory";
 import AccountsActivity     from "./Components/AccountsActivity";
 import BottleDeposit        from "./Components/BottleDeposit";
-import UserProfile          from "./Components/UserProfile";          // ← NEW
+import UserProfile          from "./Components/UserProfile";
+import BottomNav            from "./Components/BottomNav";
 import { fetchBottleDeposits } from "./Components/BottleDeposit";
 
 export default function App() {
@@ -165,7 +166,7 @@ export default function App() {
         activeModule={activeModule}
         setActiveModule={navigate}
         lowStockCount={lowStockCount}
-        user={currentUser}           // ← always up-to-date
+        user={currentUser}
         onLogout={() => logout(currentUser?.id)}
       />
 
@@ -279,6 +280,13 @@ export default function App() {
 
         </div>
       </main>
+
+      {/* ── Mobile bottom navigation bar (≤767px) ── */}
+      <BottomNav
+        activeModule={activeModule}
+        setActiveModule={navigate}
+        lowStockCount={lowStockCount}
+      />
     </div>
   );
 }

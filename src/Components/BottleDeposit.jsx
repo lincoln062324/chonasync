@@ -520,7 +520,7 @@ export default function BottleDeposit({ deposits = [], setDeposits, currentUser 
                       </Badge>
                     </td>
                     <td>
-                      <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
+                      <div style={{ display: "flex", gap: 5, justifyContent: "flex-end"}}>
                         {r.status !== "returned" && (
                           <button className="tbl-icon-btn" onClick={() => openReturn(r)} title="Record Return"
                             style={{ color: "var(--color-green)", borderColor: "var(--color-green-border)", background: "var(--color-green-light)" }}>

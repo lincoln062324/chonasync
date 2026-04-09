@@ -206,13 +206,15 @@ export default function Sidebar({ activeModule, setActiveModule, lowStockCount, 
               key={item.id}
               onClick={() => handleNav(item.id)}
               className={`sidebar__nav-item${effectiveModule === item.id ? " sidebar__nav-item--active" : ""}`}
+              data-label={item.label}
+              title={item.label}
             >
               {item.emoji ? (
-                <span style={{ fontSize: 14, lineHeight: 1 }}>{item.emoji}</span>
+                <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>{item.emoji}</span>
               ) : (
                 <Icon name={item.icon} size={16} />
               )}
-              {item.label}
+              <span className="sidebar__nav-item-label">{item.label}</span>
               {item.id === "alerts" && lowStockCount > 0 && (
                 <span className="sidebar__nav-badge">{lowStockCount}</span>
               )}

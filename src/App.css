@@ -263,6 +263,7 @@ button { font-family: inherit; }
   align-items: flex-start;
   box-shadow: var(--shadow-card);
   transition: var(--transition);
+  min-width: 0;
 }
 
 .stat-card:hover {
@@ -279,24 +280,39 @@ button { font-family: inherit; }
   justify-content: center;
 }
 
+.stat-card > div:not(.stat-card__icon) {
+  min-width: 0;
+  flex: 1;
+}
+
 .stat-card__value {
-  font-family: 'Playfair Display', serif;
+  font-family: sans-serif;
   font-size: 17px;
   font-weight: 800;
   color: var(--color-text-primary);
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .stat-card__label {
   font-size: 13px;
   color: var(--color-text-secondary);
   margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-card__sub {
   font-size: 11px;
   color: var(--color-text-muted);
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── CARDS & PANELS ──────────────────────────────────────── */
@@ -336,7 +352,7 @@ button { font-family: inherit; }
   background: #fffefb;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  overflow: auto;
   box-shadow: var(--shadow-card);
   width: auto;
 }
@@ -1649,6 +1665,7 @@ button { font-family: inherit; }
   justify-content: center;
   width: 28px;
   height: 28px;
+  margin-left: -2px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--color-border);
   background: var(--color-surface);
@@ -4015,4 +4032,1714 @@ body::before {
 .rank-badge {
   background: #fef3c7;
   color: #b45309;
+}
+/* ================================================================
+   ██████╗ ███████╗███████╗██████╗  ██████╗ ███╗   ██╗███████╗
+   ██╔══██╗██╔════╝██╔════╝██╔══██╗██╔═══██╗████╗  ██║██╔════╝
+   ██████╔╝█████╗  ███████╗██████╔╝██║   ██║██╔██╗ ██║███████╗
+   ██╔══██╗██╔══╝  ╚════██║██╔═══╝ ██║   ██║██║╚██╗██║╚════██║
+   ██║  ██║███████╗███████║██║     ╚██████╔╝██║ ╚████║███████║
+   ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝      ╚═════╝ ╚═╝  ╚═══╝╚══════╝
+
+   FULL DEVICE RESPONSIVENESS — PRO EDITION
+   Breakpoints:
+     xxl : ≥1600px   (4K / ultra-wide monitors)
+     xl  : ≥1400px   (large desktop)
+     lg  : 1024-1399 (laptop / desktop standard)
+     md  : 768-1023  (tablet landscape, small laptop)
+     sm  : 481-767   (tablet portrait, large phone)
+     xs  : 360-480   (phone)
+     xxs : <360px    (small phone)
+   ================================================================ */
+
+/* ─── CSS CUSTOM PROPERTIES: device-adaptive tokens ──────────── */
+:root {
+  --sidebar-width:      224px;
+  --sidebar-collapsed:  64px;
+  --topbar-height:      56px;
+  --content-pad:        28px;
+  --content-pad-md:     20px;
+  --content-pad-sm:     16px;
+  --content-pad-xs:     12px;
+  --card-radius:        var(--radius-xl);
+  --table-min-width:    640px;
+  --pos-cart-width:     380px;
+  --pos-cart-width-lg:  320px;
+  --pos-cart-width-md:  300px;
+}
+
+/* ================================================================
+   DESKTOP LARGE (≥1400px) — Wider, more columns, bigger type
+   ================================================================ */
+@media (min-width: 1400px) {
+  :root {
+    --sidebar-width: 240px;
+    --content-pad: 36px;
+    --pos-cart-width: 420px;
+  }
+
+  .sidebar {
+    width: var(--sidebar-width);
+  }
+
+  .main-content--padded {
+    padding: var(--content-pad);
+    max-width: 1600px;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+
+  .pos-layout {
+    grid-template-columns: 1fr var(--pos-cart-width);
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  }
+
+  .supplier-grid {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  }
+
+  .dashboard-grid {
+    gap: 18px;
+  }
+
+  .page-header__title {
+    font-size: 26px;
+  }
+
+  .stat-card__value {
+    font-size: 22px;
+  }
+
+  .stock-layout {
+    grid-template-columns: 240px 1fr;
+    gap: 24px;
+  }
+}
+
+/* ================================================================
+   ULTRA-WIDE (≥1600px) — Maximum screen real estate
+   ================================================================ */
+@media (min-width: 1600px) {
+  :root {
+    --sidebar-width: 260px;
+    --pos-cart-width: 460px;
+  }
+
+  .main-content--padded {
+    padding: 40px;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+}
+
+/* ================================================================
+   LAPTOP STANDARD (1024–1399px) — Tighter sidebar, fluid grid
+   ================================================================ */
+@media (min-width: 1024px) and (max-width: 1399px) {
+  :root {
+    --sidebar-width: 210px;
+    --content-pad: 24px;
+    --pos-cart-width: 340px;
+  }
+
+  .sidebar {
+    width: var(--sidebar-width);
+  }
+
+  .sidebar__brand-name {
+    font-size: 16px;
+  }
+
+  .sidebar__nav-item {
+    padding: 9px 12px;
+    font-size: 12.5px;
+    gap: 8px;
+  }
+
+  .main-content--padded {
+    padding: var(--content-pad);
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 14px;
+  }
+
+  .stat-card {
+    padding: 18px 20px;
+    gap: 14px;
+  }
+
+  .stat-card__value {
+    font-size: 18px;
+  }
+
+  .pos-layout {
+    grid-template-columns: 1fr var(--pos-cart-width);
+    gap: 14px;
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .dashboard-grid {
+    gap: 14px;
+  }
+
+  .stock-layout {
+    grid-template-columns: 195px 1fr;
+    gap: 18px;
+  }
+}
+
+/* ================================================================
+   TABLET LANDSCAPE / SMALL LAPTOP (768–1023px)
+   ── Collapsible sidebar icon-only mode ──
+   ================================================================ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --sidebar-width: var(--sidebar-collapsed);
+    --content-pad: var(--content-pad-md);
+    --pos-cart-width: var(--pos-cart-width-md);
+  }
+
+  /* Sidebar collapses to icon-only strip */
+  .sidebar {
+    width: var(--sidebar-collapsed);
+    overflow: visible;
+    transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
+    z-index: 50;
+  }
+
+  /* Expand on hover */
+  .sidebar:hover {
+    width: 210px;
+    box-shadow: 4px 0 24px rgba(127,29,29,0.25);
+  }
+
+  /* Brand: icon only when collapsed */
+  .sidebar__brand {
+    padding: 20px 14px 14px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .sidebar__brand-name,
+  .sidebar__brand-sub {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    display: block;
+    margin-left: 0;
+  }
+
+  .sidebar:hover .sidebar__brand-name,
+  .sidebar:hover .sidebar__brand-sub {
+    opacity: 1;
+  }
+
+  .logopaw {
+    position: static;
+    display: block;
+    margin: 0 auto 8px;
+  }
+
+  /* Nav items: icon-only when collapsed */
+  .sidebar__nav-item {
+    padding: 10px 0;
+    justify-content: center;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .sidebar__nav-item .sidebar__nav-item-label,
+  .sidebar__nav-item span:not([class]) {
+    opacity: 0;
+    width: 0;
+    transition: opacity 0.15s, width 0.15s;
+    white-space: nowrap;
+  }
+
+  .sidebar:hover .sidebar__nav-item {
+    padding: 10px 12px;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .sidebar:hover .sidebar__nav-item .sidebar__nav-item-label,
+  .sidebar:hover .sidebar__nav-item span:not([class]) {
+    opacity: 1;
+    width: auto;
+  }
+
+  /* Badge stays visible */
+  .sidebar__nav-badge {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .sidebar:hover .sidebar__nav-badge {
+    position: static;
+    transform: none;
+    margin-left: auto;
+  }
+
+  .sidebar__nav-item {
+    position: relative;
+  }
+
+  /* Footer: hide text when collapsed */
+  .sidebar__footer {
+    padding: 10px 8px;
+    overflow: hidden;
+  }
+
+  .sidebar__footer-store,
+  .sidebar__footer-version {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .sidebar:hover .sidebar__footer-store,
+  .sidebar:hover .sidebar__footer-version {
+    opacity: 1;
+  }
+
+  /* User profile card: avatar only when collapsed */
+  .sidebar__user-card {
+    padding: 8px;
+    justify-content: center;
+  }
+
+  .sidebar__user-card-text {
+    display: none;
+  }
+
+  .sidebar:hover .sidebar__user-card {
+    padding: 10px 12px;
+    justify-content: flex-start;
+  }
+
+  .sidebar:hover .sidebar__user-card-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Main content fills remaining space */
+  .main-content {
+    margin-left: 0;
+    width: calc(100% - var(--sidebar-collapsed));
+  }
+
+  .main-content--padded {
+    padding: var(--content-pad);
+  }
+
+  .main-content--pos {
+    padding: 16px;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .stat-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .stat-card__value {
+    font-size: 16px;
+  }
+
+  .stat-card__label {
+    font-size: 12px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .pos-layout {
+    grid-template-columns: 1fr var(--pos-cart-width);
+    gap: 12px;
+    height: calc(100vh - 90px);
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+
+  .stock-layout {
+    grid-template-columns: 175px 1fr;
+    gap: 14px;
+  }
+
+  .supplier-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  .alert-stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .analysis-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .report-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+  }
+
+  .report-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .page-header__title {
+    font-size: 20px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 580px;
+  }
+}
+
+/* ================================================================
+   TABLET PORTRAIT (481–767px) — Drawer sidebar, bottom nav
+   ================================================================ */
+@media (min-width: 481px) and (max-width: 767px) {
+  :root {
+    --content-pad: var(--content-pad-sm);
+  }
+
+  .mobile-topbar {
+    display: flex;
+    height: var(--topbar-height);
+  }
+
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 270px;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    width: 100%;
+    min-height: calc(100vh - var(--topbar-height));
+  }
+
+  .main-content--padded {
+    padding: var(--content-pad);
+  }
+
+  .main-content--pos {
+    padding: 12px;
+  }
+
+  .page-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .page-header__title {
+    font-size: 18px;
+  }
+
+  .page-header__sub {
+    font-size: 12px;
+    display: none;
+  }
+
+  /* 2-col stat grid */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .stat-card {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+
+  .stat-card__value {
+    font-size: 15px;
+  }
+
+  .stat-card__sub {
+    font-size: 11px;
+  }
+
+  /* Dashboard single col */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* POS stacked — products on top, cart below */
+  .pos-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: unset;
+    gap: 10px;
+  }
+
+  .pos-products {
+    overflow: visible;
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .pos-product-card {
+    padding: 10px;
+  }
+
+  .cart-panel {
+    max-height: 56vh;
+  }
+
+  .cart-items {
+    max-height: 240px;
+  }
+
+  /* Stock: horizontal pill tabs */
+  .stock-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Tables scroll horizontally */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+  }
+
+  .data-table {
+    min-width: 560px;
+  }
+
+  /* Analysis stacked */
+  .analysis-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Supplier single col */
+  .supplier-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Alert stat: 2+2 grid */
+  .alert-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .alert-stat-card__num {
+    font-size: 28px;
+  }
+
+  .alert-stat-card {
+    padding: 14px;
+  }
+
+  /* Form grid collapses */
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Modal slides up from bottom */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    animation: slideUpMobile 0.25s ease;
+  }
+
+  /* Filter rows wrap */
+  .filter-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* E-load filter tabs scroll */
+  .eload-filter-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .eload-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Report tabs scroll */
+  .report-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .report-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .report-tab {
+    flex-shrink: 0;
+    font-size: 12.5px;
+  }
+
+  /* PO item row */
+  .po-item-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .po-item-row select {
+    flex: 1 1 100%;
+  }
+
+  .po-item-row input {
+    flex: 1;
+    min-width: 80px;
+  }
+
+  /* Sales history */
+  .sh-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sh-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sh-tab {
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+
+  .sh-filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* ================================================================
+   MOBILE PHONE (360–480px) — Bottom nav, full-width cards
+   ================================================================ */
+@media (min-width: 360px) and (max-width: 480px) {
+  :root {
+    --content-pad: var(--content-pad-xs);
+    --topbar-height: 52px;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    height: var(--topbar-height);
+    padding: 8px 12px;
+  }
+
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 82vw;
+    max-width: 300px;
+    height: 100%;
+    z-index: 100;
+    transform: translateX(-110%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    width: 100%;
+    /* Pad bottom for bottom nav bar */
+    padding-bottom: 60px;
+  }
+
+  .main-content--padded {
+    padding: var(--content-pad);
+    padding-bottom: 70px;
+  }
+
+  .main-content--pos {
+    padding: 8px;
+    padding-bottom: 70px;
+  }
+
+  .page-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .page-header__title {
+    font-size: 16px;
+  }
+
+  .page-header__sub {
+    display: none;
+  }
+
+  /* 2-col stat grid */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .stat-card {
+    padding: 12px;
+    gap: 8px;
+    flex-direction: row;
+    align-items: flex-start;
+    border-top-width: 2px;
+  }
+
+  .stat-card__icon {
+    padding: 8px;
+  }
+
+  .stat-card__value {
+    font-size: 14px;
+  }
+
+  .stat-card__label {
+    font-size: 11px;
+  }
+
+  .stat-card__sub {
+    font-size: 10px;
+  }
+
+  /* Dashboard single col */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+  }
+
+  .card--padded {
+    padding: 14px;
+  }
+
+  .card__title {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  /* POS: stacked */
+  .pos-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: unset;
+    gap: 8px;
+  }
+
+  .pos-products {
+    overflow: visible;
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .pos-product-card {
+    padding: 10px;
+    border-radius: var(--radius-lg);
+  }
+
+  .pos-product-card__name {
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+
+  .pos-product-card__price {
+    font-size: 13px;
+  }
+
+  .pos-product-card__sku {
+    display: none;
+  }
+
+  .cart-panel {
+    max-height: 50vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .cart-items {
+    max-height: 180px;
+  }
+
+  .cart-item {
+    padding: 8px 6px;
+    gap: 6px;
+  }
+
+  .cart-item__name {
+    font-size: 12px;
+  }
+
+  .checkout-panel {
+    padding: 10px 12px;
+  }
+
+  .checkout-total {
+    font-size: 15px;
+  }
+
+  /* Stock management */
+  .stock-layout {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Hide table on mobile — show cards */
+  .stock-main .table-wrap {
+    display: none;
+  }
+
+  .stock-card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .stock-card {
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(145deg, #fffefb, #fff9e6);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-card);
+    gap: 8px;
+  }
+
+  .stock-card__stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  /* Tables scroll */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-lg);
+  }
+
+  .data-table {
+    min-width: 540px;
+  }
+
+  /* Modals from bottom */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    border-radius: 18px 18px 0 0;
+    max-height: 92vh;
+    animation: slideUpMobile 0.25s ease;
+  }
+
+  .modal__body {
+    padding: 14px;
+  }
+
+  .modal__header {
+    padding: 14px 16px 12px;
+  }
+
+  .modal__title {
+    font-size: 14px;
+  }
+
+  /* Form grid single col */
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Alert stat: 2-col */
+  .alert-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .alert-stat-card {
+    padding: 12px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .alert-stat-card__num {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .alert-stat-card__sub {
+    display: none;
+  }
+
+  /* Analysis stacked */
+  .analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Supplier single col */
+  .supplier-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Report tabs scroll */
+  .report-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    padding: 3px;
+  }
+
+  .report-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .report-tab {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    padding: 6px 10px;
+    white-space: nowrap;
+  }
+
+  /* Filter row */
+  .filter-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .filter-row .input,
+  .filter-row .select,
+  .filter-row .search-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Sales history */
+  .sh-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sh-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sh-tab {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .sh-filters {
+    flex-direction: column;
+  }
+
+  /* Buttons */
+  .btn--md {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .btn--lg {
+    font-size: 14px;
+    padding: 11px 20px;
+  }
+}
+
+/* ================================================================
+   SMALL PHONES (<360px) — Maximum compression
+   ================================================================ */
+@media (max-width: 359px) {
+  :root {
+    --content-pad: 10px;
+  }
+
+  .main-content--padded {
+    padding: var(--content-pad);
+    padding-bottom: 70px;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .stat-card {
+    flex-direction: row;
+    padding: 10px 12px;
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+  }
+
+  .pos-product-card {
+    padding: 8px;
+  }
+
+  .pos-product-card__name {
+    font-size: 11px;
+  }
+
+  .pos-product-card__price {
+    font-size: 12px;
+  }
+
+  .alert-stat-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .page-header__title {
+    font-size: 15px;
+  }
+
+  .sidebar {
+    width: 88vw;
+  }
+
+  .mobile-topbar__brand span {
+    font-size: 13px;
+  }
+}
+
+/* ================================================================
+   MOBILE BOTTOM NAV BAR — shown on phones (≤767px)
+   Fixed bottom navigation for thumb-friendly access
+   ================================================================ */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  background: linear-gradient(135deg, #7f1d1d, #450a0a);
+  border-top: 2px solid #dc262640;
+  box-shadow: 0 -4px 20px rgba(127,29,29,0.3);
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: 60px;
+  display: none;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 0;
+}
+
+@media (max-width: 767px) {
+  .bottom-nav {
+    display: flex;
+  }
+}
+
+.bottom-nav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  color: #fecaca70;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  padding: 6px 2px;
+  border-radius: 0;
+  transition: color 0.15s, background 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav__item:active {
+  background: rgba(220,38,38,0.2);
+}
+
+.bottom-nav__item--active {
+  color: #fff;
+}
+
+.bottom-nav__item--active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 2.5px;
+  background: linear-gradient(90deg, #f59e0b, #dc2626);
+  border-radius: 0 0 4px 4px;
+}
+
+.bottom-nav__icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  position: relative;
+}
+
+.bottom-nav__badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 99px;
+  font-size: 8px;
+  font-weight: 800;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #450a0a;
+  font-family: 'Playfair Display', serif;
+}
+
+.bottom-nav__label {
+  font-size: 8.5px;
+  line-height: 1;
+}
+
+/* ================================================================
+   LANDSCAPE PHONE — Side-by-side POS
+   ================================================================ */
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 500px) {
+  .mobile-topbar {
+    height: 44px;
+    padding: 6px 12px;
+  }
+
+  .main-content--padded {
+    padding: 8px 12px;
+    padding-bottom: 6px;
+  }
+
+  /* Landscape POS: side by side */
+  .pos-layout {
+    grid-template-columns: 1fr 260px !important;
+    height: calc(100vh - 50px) !important;
+    gap: 8px;
+  }
+
+  .cart-panel {
+    max-height: unset !important;
+  }
+
+  .cart-items {
+    max-height: calc(100vh - 220px) !important;
+  }
+
+  .pos-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)) !important;
+    gap: 6px;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .bottom-nav {
+    display: none !important;
+  }
+}
+
+/* ================================================================
+   SIDEBAR — HOVER EXPAND for tablet (768-1023px)
+   Tooltip labels on hover when collapsed
+   ================================================================ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Tooltip when sidebar is collapsed */
+  .sidebar__nav-item {
+    position: relative;
+  }
+
+  .sidebar__nav-item::after {
+    content: attr(data-label);
+    position: absolute;
+    left: calc(var(--sidebar-collapsed) - 4px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1a0a00;
+    color: #fef2f2;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s, transform 0.15s;
+    transform: translateY(-50%) translateX(-6px);
+    z-index: 200;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  .sidebar:not(:hover) .sidebar__nav-item:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ================================================================
+   IMPROVED TOUCH INTERACTIONS — All touch devices
+   ================================================================ */
+@media (hover: none) and (pointer: coarse) {
+  /* Bigger tap targets */
+  .sidebar__nav-item {
+    padding: 12px 14px;
+    min-height: 46px;
+  }
+
+  .btn--sm {
+    padding: 9px 14px;
+    font-size: 13px;
+    min-height: 38px;
+  }
+
+  .btn--md {
+    min-height: 44px;
+  }
+
+  .qty-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cat-item {
+    min-height: 38px;
+    padding: 8px 14px;
+  }
+
+  .tbl-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .pos-product-card {
+    min-height: 80px;
+  }
+
+  /* Remove hover effects on touch — they get stuck */
+  .stat-card:hover,
+  .supplier-card:hover,
+  .pos-product-card:hover,
+  .dash-section-card:hover,
+  .btn--primary:hover:not(:disabled) {
+    transform: none;
+  }
+
+  /* Active states instead of hover */
+  .pos-product-card:active {
+    transform: scale(0.97);
+    border-color: #dc2626;
+    box-shadow: 0 2px 8px rgba(220,38,38,0.25);
+  }
+
+  .btn--primary:active:not(:disabled) {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+
+  .btn--secondary:active:not(:disabled) {
+    background: #fef3c7;
+  }
+
+  /* Improved input sizing for touch */
+  .input,
+  .select {
+    font-size: 16px; /* Prevents iOS auto-zoom */
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  .search-wrap .input {
+    padding-left: 36px;
+  }
+}
+
+/* ================================================================
+   CONTAINER-ADAPTIVE CARDS — flex wrap for any container width
+   ================================================================ */
+
+/* Stat cards always use auto-fit for best fill */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+}
+
+/* Supplier grid always fills available space */
+.supplier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+}
+
+/* ================================================================
+   IMPROVED MODAL RESPONSIVENESS
+   ================================================================ */
+
+/* Desktop: centered modal */
+@media (min-width: 768px) {
+  .modal-overlay {
+    align-items: center;
+    padding: 16px;
+  }
+
+  .modal {
+    border-radius: 16px;
+    max-height: 90vh;
+    animation: slideUp 0.2s ease;
+  }
+}
+
+/* All modal widths clamp to screen */
+.modal {
+  width: min(100%, var(--modal-max, 560px));
+}
+
+/* Large modal */
+.modal--lg {
+  --modal-max: 680px;
+}
+
+/* ================================================================
+   TABLE IMPROVEMENTS — Responsive column hiding
+   ================================================================ */
+
+/* On tablet: hide less-critical columns */
+@media (max-width: 900px) {
+  /* PO table: hide expected date column */
+  .table-po .data-table th:nth-child(6),
+  .table-po .data-table td:nth-child(6) {
+    display: none;
+  }
+
+  /* Sales history: hide subtotal/tax */
+  .table-sales .data-table th:nth-child(5),
+  .table-sales .data-table td:nth-child(5),
+  .table-sales .data-table th:nth-child(6),
+  .table-sales .data-table td:nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Supplier table on mobile */
+  .table-supplier .data-table th:nth-child(4),
+  .table-supplier .data-table td:nth-child(4),
+  .table-supplier .data-table th:nth-child(5),
+  .table-supplier .data-table td:nth-child(5) {
+    display: none;
+  }
+}
+
+/* Table scroll fade indicator */
+.table-wrap {
+  position: relative;
+}
+
+@media (max-width: 1023px) {
+  .table-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    background: linear-gradient(to right, transparent, rgba(255,251,240,0.85));
+    pointer-events: none;
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+  }
+}
+
+/* ================================================================
+   PRINT STYLES — Clean output
+   ================================================================ */
+@media print {
+  .sidebar,
+  .mobile-topbar,
+  .hamburger-btn,
+  .sidebar-overlay,
+  .bottom-nav,
+  .btn--primary,
+  .btn--danger {
+    display: none !important;
+  }
+
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .main-content {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .table-wrap {
+    border: 1px solid #ddd;
+    overflow: visible;
+    box-shadow: none;
+  }
+
+  .data-table {
+    min-width: unset !important;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .page-header__title {
+    font-size: 18px !important;
+    -webkit-text-fill-color: #1a0a00 !important;
+    background: none !important;
+    color: #1a0a00 !important;
+  }
+}
+
+/* ================================================================
+   SAFE AREA — Notch / home indicator support (iOS)
+   ================================================================ */
+@supports (padding: max(0px)) {
+  .mobile-topbar {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+
+  .sidebar {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ================================================================
+   SMOOTH TRANSITIONS — Sidebar open/close
+   ================================================================ */
+.sidebar {
+  transition: width 0.25s cubic-bezier(0.4,0,0.2,1),
+              transform 0.28s cubic-bezier(0.4,0,0.2,1),
+              box-shadow 0.25s ease;
+}
+
+.main-content {
+  transition: padding 0.2s ease;
+}
+
+/* ================================================================
+   ACCESSIBILITY — Focus styles
+   ================================================================ */
+.sidebar__nav-item:focus-visible,
+.btn:focus-visible,
+.pos-product-card:focus-visible,
+.cat-item:focus-visible,
+.bottom-nav__item:focus-visible {
+  outline: 2.5px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+/* ================================================================
+   UTILITY CLASSES — Responsive helpers
+   ================================================================ */
+
+/* Hide on mobile */
+@media (max-width: 767px) {
+  .hide-mobile { display: none !important; }
+}
+
+/* Hide on tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hide-tablet { display: none !important; }
+}
+
+/* Show only on mobile */
+.show-mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .show-mobile {
+    display: block;
+  }
+}
+
+/* ================================================================
+   BOTTOM NAV SPACER — Prevents content hidden behind bottom nav
+   ================================================================ */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+
+/* ================================================================
+   SIDEBAR NAV LABEL — span wrapping text for collapse support
+   ================================================================ */
+.sidebar__nav-item-label {
+  /* Visible by default */
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 0.15s, max-width 0.25s;
+  max-width: 200px;
+}
+
+/* Collapsed state: label fades out */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sidebar:not(:hover) .sidebar__nav-item-label {
+    opacity: 0;
+    max-width: 0;
+    pointer-events: none;
+  }
+
+  .sidebar:not(:hover) .sidebar__nav-item {
+    padding: 11px 0;
+    justify-content: center;
+  }
+
+  .sidebar:not(:hover) .sidebar__brand-name,
+  .sidebar:not(:hover) .sidebar__brand-sub {
+    opacity: 0;
+    max-width: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .sidebar__brand-name,
+  .sidebar__brand-sub {
+    transition: opacity 0.15s, max-width 0.2s;
+    max-width: 200px;
+    overflow: hidden;
+  }
+
+  /* Logopaw always visible, centered */
+  .sidebar:not(:hover) .logopaw {
+    margin: 0 auto;
+  }
+
+  /* Sign out button collapses too */
+  .sidebar:not(:hover) .sidebar__footer-store,
+  .sidebar:not(:hover) .sidebar__footer-version {
+    max-height: 0;
+    overflow: hidden;
+    margin: 0;
+  }
+
+  /* User profile button: avatar only when collapsed */
+  .sidebar:not(:hover) [title="My Profile"] > div:not(:first-child),
+  .sidebar:not(:hover) [title="My Profile"] > div[style*="flex: 1"],
+  .sidebar:not(:hover) [title="My Profile"] > div[style*="flexShrink: 0"]:last-child {
+    display: none;
+  }
+
+  .sidebar:not(:hover) [title="My Profile"] {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  /* Sign out button hides when collapsed */
+  .sidebar:not(:hover) .sidebar__footer button {
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .sidebar__footer button {
+    transition: opacity 0.15s, height 0.2s;
+  }
+}
+
+/* ================================================================
+   IMPROVED TABLE RESPONSIVE SCROLL FADE
+   ================================================================ */
+@media (max-width: 1023px) {
+  .table-wrap {
+    position: relative;
+  }
+
+  /* Right fade to indicate scroll */
+  .table-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 40px; /* Below header */
+    bottom: 0;
+    width: 32px;
+    background: linear-gradient(to right, transparent, rgba(255,251,240,0.9));
+    pointer-events: none;
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+    z-index: 1;
+  }
+}
+
+/* ================================================================
+   DASHBOARD GRID — smarter responsive
+   ================================================================ */
+@media (min-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1400px) {
+  /* Wider screens: recent sales side by side still looks good */
+  .dashboard-grid {
+    gap: 18px;
+  }
+}
+
+/* ================================================================
+   POS MODE TABS — responsive
+   ================================================================ */
+@media (max-width: 480px) {
+  .pos-mode-tabs {
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .pos-mode-tab {
+    font-size: 12px;
+    padding: 7px 8px;
+  }
+}
+
+/* ================================================================
+   BOTTLE DEPOSIT MODULE — mobile responsive
+   ================================================================ */
+@media (max-width: 640px) {
+  .deposit-status-pill {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+}
+
+/* ================================================================
+   ACCOUNTS & ACTIVITY — responsive grid
+   ================================================================ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .accounts-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ================================================================
+   USER PROFILE — responsive
+   ================================================================ */
+@media (max-width: 640px) {
+  .profile-avatar-section {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
