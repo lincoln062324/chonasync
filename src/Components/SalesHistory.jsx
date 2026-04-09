@@ -251,7 +251,7 @@ export default function SalesHistory({ transactions, initialTab = "product" }) {
           </div>
 
           {/* Table */}
-          <div className="table-wrap">
+          <div className="table-wrap3">
             <table className="data-table">
               <thead>
                 <tr>

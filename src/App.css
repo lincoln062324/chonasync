@@ -348,13 +348,64 @@ button { font-family: inherit; }
 }
 
 /* ─── TABLE ───────────────────────────────────────────────── */
-.table-wrap {
+.table-wrap1 {
   background: #fffefb;
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: auto;
   box-shadow: var(--shadow-card);
   width: auto;
+  height: 700px;
+}
+
+.table-wrap2 {
+  background: #fffefb;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: auto;
+  box-shadow: var(--shadow-card);
+  width: auto;
+  height: 630px;
+}
+
+.table-wrap3 {
+  background: #fffefb;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: auto;
+  box-shadow: var(--shadow-card);
+  width: auto;
+  height: 550px;
+}
+
+.table-wrap4 {
+  background: #fffefb;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: auto;
+  box-shadow: var(--shadow-card);
+  width: auto;
+  height: 770px;
+}
+
+.table-wrap5 {
+  background: #fffefb;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: auto;
+  box-shadow: var(--shadow-card);
+  width: auto;
+  height: 595px;
+}
+
+.table-wrap6 {
+  background: #fffefb;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: auto;
+  box-shadow: var(--shadow-card);
+  width: auto;
+  height: 550px;
 }
 
 .data-table {
@@ -1235,7 +1286,7 @@ button { font-family: inherit; }
   display: grid;
   grid-template-columns: 1fr 385px;
   gap: 16px;
-  height: calc(100vh - 115px);
+  height: calc(100vh - 90px);
   min-height: 600px;
 }
 

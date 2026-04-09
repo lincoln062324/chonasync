@@ -169,7 +169,7 @@ export default function ELoading({ loadProducts, onAdd, onUpdate, onDelete }) {
       </div>
 
       {/* ── Table ── */}
-      <div className="table-wrap">
+      <div className="table-wrap2">
         <table className="data-table">
           <thead>
             <tr>

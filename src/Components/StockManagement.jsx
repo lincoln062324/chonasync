@@ -222,7 +222,7 @@ export default function StockManagement({
         )}
 
         {/* Table — hidden on mobile via CSS, replaced by cards below */}
-        <div className="table-wrap">
+        <div className="table-wrap1">
           <table className="data-table">
             <thead>
               <tr>

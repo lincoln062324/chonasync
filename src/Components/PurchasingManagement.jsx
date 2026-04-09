@@ -222,7 +222,7 @@ export default function PurchasingManagement({
       </div>
 
       {/* ── PO Table ── */}
-      <div className="table-wrap">
+      <div className="table-wrap4">
         <table className="data-table">
           <thead>
             <tr>

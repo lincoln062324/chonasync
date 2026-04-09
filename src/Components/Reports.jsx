@@ -104,7 +104,7 @@ export default function Reports({ products, transactions, purchaseOrders }) {
             <StatCard label="Retail Value"     value={`₱${retailValue.toLocaleString()}`}     icon="chart" color="#059669" bg="#ecfdf5" />
             <StatCard label="Potential Profit" value={`₱${potentialProfit.toLocaleString()}`} icon="star"  color="#d97706" bg="#fffbeb" />
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap5">
             <table className="data-table">
               <thead>
                 <tr>{["Product","Category","Stock","Cost/Unit","Price/Unit","Stock Value","Retail Value","Margin"].map(h => <th key={h}>{h}</th>)}</tr>
