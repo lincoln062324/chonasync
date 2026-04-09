@@ -1251,6 +1251,7 @@ button { font-family: inherit; }
   grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 10px;
   padding-bottom: 8px;
+  overflow-y: auto;
 }
 
 .pos-product-card {
@@ -1755,12 +1756,15 @@ button { font-family: inherit; }
 
 /* ─── PURCHASING MODULE ───────────────────────────────────── */
 .po-item-row {
-  display: grid;
-  grid-template-columns: 1fr 90px 110px 36px;
+  display: flex;
   gap: 8px;
   margin-bottom: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
+
+.po-item-row .select { flex: 2; min-width: 0; }
+.po-item-row .input  { flex: 1; min-width: 70px; }
 
 .po-total-bar {
   background: #fffbf0;

@@ -223,6 +223,7 @@ export default function App() {
             <PurchasingManagement
               purchaseOrders={purchaseOrders} setPurchaseOrders={setPurchaseOrders}
               products={products} setProducts={setProducts} suppliers={suppliers}
+              onAddProduct={async (p) => { const s = await createProduct(p); setProducts(prev => [...prev, s]); return s; }}
               onCreatePO={async (po) => { const s = await createPurchaseOrder(po); setPurchaseOrders(prev => [s, ...prev]); }}
               onReceivePO={async (po) => {
                 await receivePurchaseOrder(po);

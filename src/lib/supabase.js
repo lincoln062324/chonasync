@@ -170,21 +170,37 @@ export async function fetchProducts() {
 }
 
 export async function createProduct(product) {
-  const { data, error } = await supabase.from("products").insert({
-    sku:           product.sku,
-    name:          product.name,
-    category:      product.category,
-    supplier_id:   product.supplierId || null,
-    cost:          product.cost,
-    price:         product.price,
-    stock:         product.stock,
-    reserved:      product.reserved   ?? 0,
-    damaged:       product.damaged    ?? 0,
-    reorder_level: product.reorderLevel,
-    unit:          product.unit,
-  }).select().single();
-  if (error) throw error;
-  return mapProduct(data);
+  // Try the clean generated SKU first; fall back to a timestamped one on collision.
+  const skuAttempts = [
+    product.sku,
+    `${product.sku}-${Date.now()}`,
+  ];
+ 
+  for (const sku of skuAttempts) {
+    const { data, error } = await supabase.from("products").insert({
+      sku,
+      name:          product.name,
+      category:      product.category,
+      supplier_id:   product.supplierId || null,
+      cost:          product.cost,
+      price:         product.price,
+      stock:         product.stock,
+      reserved:      product.reserved   ?? 0,
+      damaged:       product.damaged    ?? 0,
+      reorder_level: product.reorderLevel,
+      unit:          product.unit,
+    }).select().single();
+ 
+    if (!error) return mapProduct(data);
+ 
+    // Only retry on a unique-constraint violation; re-throw anything else.
+    if (!error.message.includes("duplicate key")) throw error;
+  }
+ 
+  throw new Error(
+    `Could not assign a unique SKU for "${product.name}". ` +
+    `Please add it manually from Stock Management.`
+  );
 }
 
 export async function updateProduct(id, changes) {

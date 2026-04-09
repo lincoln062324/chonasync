@@ -1,6 +1,63 @@
 import { useState } from "react";
 import Icon from "../Components/Icon";
 import { Badge, Btn, Modal, Field } from "../Components/Primitives";
+import { CATEGORIES, CATEGORY_META } from "../data/constants";
+
+// ── SKU prefix per category (mirrors StockManagement) ─────────────────────────
+const SKU_PREFIX = {
+  "Beverages":        "BEV",
+  "Snacks":           "SNK",
+  "Canned/Dry Goods": "FD",
+  "Household":        "HH",
+  "Personal Care":    "PC",
+  "Dairy":            "DAI",
+  "Condiments":       "COND",
+  "Cigarettes":       "CIG",
+  "Hygiene":          "HYG",
+  "Groceries":        "GRC",
+  "Other":            "OTH",
+};
+
+function generateSKU(category, existingProducts, pendingItems = []) {
+  const prefix  = SKU_PREFIX[category] ?? "OTH";
+  const pattern = new RegExp(`^${prefix}-(\\d+)$`, "i");
+  let max = 0;
+  // Check already-saved DB products
+  for (const p of existingProducts) {
+    const m = p.sku?.match(pattern);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  // Also check other pending new-product rows in the current PO
+  for (const item of pendingItems) {
+    if (item.isNew && item.newSku) {
+      const m = item.newSku.match(pattern);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    }
+  }
+  return `${prefix}-${String(max + 1).padStart(3, "0")}`;
+}
+
+const fmt = (n) =>
+  `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const statusColor = { pending: "yellow", transit: "blue", received: "green", cancelled: "red" };
+
+// ── Blank new-product row ──────────────────────────────────────────────────────
+function blankNewProduct(categories) {
+  return {
+    isNew:        true,
+    productId:    "",          // blank = will be created
+    newName:      "",
+    newCategory:  categories[0] || "Beverages",
+    newSku:       "",          // auto-computed
+    newCost:      "",
+    newPrice:     "",
+    newStock:     0,           // opening stock (for new products)
+    newUnit:      "piece",
+    qty:          1,
+    unitCost:     "",
+  };
+}
 
 export default function PurchasingManagement({
   purchaseOrders,
@@ -8,54 +65,150 @@ export default function PurchasingManagement({
   suppliers,
   onCreatePO,
   onReceivePO,
+  onAddProduct,   // from App.jsx — creates a new product in StockManagement
 }) {
-  const [modal,   setModal]   = useState(null);
-  const [form,    setForm]    = useState({ supplierId: "", expectedDate: "" });
-  const [poItems, setPoItems] = useState([{ productId: "", qty: 1, unitCost: 0 }]);
+  const [modal,     setModal]     = useState(null); // "create" | "view" | "repurchase"
+  const [form,      setForm]      = useState({ supplierId: "", expectedDate: "" });
+  const [poItems,   setPoItems]   = useState([{ isNew: false, productId: "", qty: 1, unitCost: 0 }]);
+  const [viewPO,    setViewPO]    = useState(null);
+  const [saving,    setSaving]    = useState(false);
 
   // ── PO item helpers ────────────────────────────────────────────────────────
-  const addItem    = ()         => setPoItems(prev => [...prev, { productId: "", qty: 1, unitCost: 0 }]);
-  const removeItem = i          => setPoItems(prev => prev.filter((_, idx) => idx !== i));
-  const updateItem = (i, k, v)  => setPoItems(prev => prev.map((item, idx) => idx === i ? { ...item, [k]: v } : item));
+  const addExistingItem = () =>
+    setPoItems(prev => [...prev, { isNew: false, productId: "", qty: 1, unitCost: 0 }]);
 
+  const addNewProductItem = () =>
+    setPoItems(prev => [
+      ...prev,
+      { ...blankNewProduct(CATEGORIES), newSku: generateSKU(CATEGORIES[0], products, prev) },
+    ]);
+
+  const removeItem = (i) => setPoItems(prev => prev.filter((_, idx) => idx !== i));
+
+  const updateItem = (i, k, v) =>
+    setPoItems(prev =>
+      prev.map((item, idx) => {
+        if (idx !== i) return item;
+        const updated = { ...item, [k]: v };
+        // Auto-fill cost when selecting an existing product
+        if (k === "productId" && !item.isNew) {
+          const p = products.find(p => p.id === v);
+          if (p) updated.unitCost = p.cost;
+        }
+        // Auto-generate SKU when category changes on a new-product row
+        if (k === "newCategory" && item.isNew) {
+          updated.newSku = generateSKU(v, products, prev);
+        }
+        // Sync unitCost from newCost on new-product rows
+        if (k === "newCost" && item.isNew) {
+          updated.unitCost = v;
+        }
+        return updated;
+      })
+    );
+
+  // ── Open modals ────────────────────────────────────────────────────────────
   const openCreate = () => {
     setForm({ supplierId: suppliers[0]?.id || "", expectedDate: "" });
-    setPoItems([{ productId: "", qty: 1, unitCost: 0 }]);
+    setPoItems([{ isNew: false, productId: "", qty: 1, unitCost: 0 }]);
     setModal("create");
   };
 
-  // ── Save PO ────────────────────────────────────────────────────────────────
+  const openView = (po) => {
+    setViewPO(po);
+    setModal("view");
+  };
+
+  const openRepurchase = (po) => {
+    setViewPO(po);
+    setForm({
+      supplierId:   po.supplierId,
+      expectedDate: "",
+    });
+    // Pre-fill items from the original PO
+    setPoItems(
+      po.items.map(i => ({
+        isNew:     false,
+        productId: i.productId,
+        qty:       i.qty,
+        unitCost:  i.unitCost,
+      }))
+    );
+    setModal("repurchase");
+  };
+
+  // ── Save PO (also creates new products first) ──────────────────────────────
   const savePO = async () => {
-    const items = poItems
-      .filter(i => i.productId)
-      .map(i => ({ ...i, qty: +i.qty, unitCost: +i.unitCost }));
-    const total = items.reduce((s, i) => s + i.qty * i.unitCost, 0);
-    const newPO = {
-      id: "po" + Date.now(),
-      date: new Date().toISOString().slice(0, 10),
-      supplierId: form.supplierId,
-      items,
-      status: "pending",
-      total,
-      expectedDate: form.expectedDate,
-      receivedDate: null,
-    };
-    if (onCreatePO) {
-      await onCreatePO(newPO);
+    setSaving(true);
+    try {
+      const resolvedItems = [];
+
+      for (const item of poItems) {
+        if (item.isNew) {
+          // Validate new product fields
+          if (!item.newName.trim()) { alert("Please enter a product name for all new products."); setSaving(false); return; }
+
+          // Create the product in StockManagement via App.jsx callback
+          if (onAddProduct) {
+            const newProduct = {
+              id:           "p" + Date.now() + Math.random(),
+              name:         item.newName.trim(),
+              sku:          item.newSku,
+              category:     item.newCategory,
+              supplierId:   form.supplierId,
+              cost:         +item.newCost || 0,
+              price:        +item.newPrice || 0,
+              stock:        +item.newStock || 0,
+              reserved:     0,
+              damaged:      0,
+              reorderLevel: 10,
+              unit:         item.newUnit,
+              variants:     [],
+            };
+            const saved = await onAddProduct(newProduct);
+            const resolvedId = saved?.id ?? newProduct.id;
+            resolvedItems.push({ productId: resolvedId, qty: +item.qty, unitCost: +item.unitCost || +item.newCost || 0 });
+          }
+        } else {
+          if (!item.productId) continue;
+          resolvedItems.push({ productId: item.productId, qty: +item.qty, unitCost: +item.unitCost });
+        }
+      }
+
+      if (resolvedItems.length === 0) { alert("Please add at least one item to the PO."); setSaving(false); return; }
+
+      const total = resolvedItems.reduce((s, i) => s + i.qty * i.unitCost, 0);
+      const newPO = {
+        id:           "po" + Date.now(),
+        date:         new Date().toISOString().slice(0, 10),
+        supplierId:   form.supplierId,
+        items:        resolvedItems,
+        status:       "pending",
+        total,
+        expectedDate: form.expectedDate,
+        receivedDate: null,
+      };
+
+      if (onCreatePO) await onCreatePO(newPO);
+      setModal(null);
+    } catch (err) {
+      alert("Failed to save PO: " + err.message);
+    } finally {
+      setSaving(false);
     }
-    setModal(null);
   };
 
   // ── Receive delivery ───────────────────────────────────────────────────────
-  const receiveOrder = async po => {
-    if (onReceivePO) {
-      await onReceivePO(po);
-    }
+  const receiveOrder = async (po) => {
+    if (!window.confirm(`Mark PO ${po.id.toUpperCase()} as received? This will update stock levels.`)) return;
+    if (onReceivePO) await onReceivePO(po);
   };
 
-  const statusColor = { pending: "yellow", transit: "blue", received: "green", cancelled: "red" };
+  const poRunningTotal = poItems.reduce((s, i) => s + +i.qty * +(i.unitCost || i.newCost || 0), 0);
 
-  const poRunningTotal = poItems.reduce((s, i) => s + +i.qty * +i.unitCost, 0);
+  // ── Helper: get product name for PO overview ──────────────────────────────
+  const productName = (productId) =>
+    products.find(p => p.id === productId)?.name ?? productId;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -68,40 +221,58 @@ export default function PurchasingManagement({
         <Btn onClick={openCreate} icon="plus">Create PO</Btn>
       </div>
 
-      {/* PO Table */}
+      {/* ── PO Table ── */}
       <div className="table-wrap">
         <table className="data-table">
           <thead>
             <tr>
-              {["PO #","Date","Supplier","Items","Total","Expected","Status","Actions"].map(h => (
+              {["PO #", "Date", "Supplier", "Items", "Total", "Expected", "Status", "Actions"].map(h => (
                 <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
+            {purchaseOrders.length === 0 && (
+              <tr>
+                <td colSpan={8} className="table-empty">No purchase orders yet. Click "Create PO" to start.</td>
+              </tr>
+            )}
             {purchaseOrders.map(po => {
               const supplier = suppliers.find(s => s.id === po.supplierId);
               return (
                 <tr key={po.id}>
-                  <td className="td-id">{po.id.toUpperCase()}</td>
+                  <td className="td-id">{po.id.toString().toUpperCase()}</td>
                   <td className="td-small">{po.date}</td>
                   <td className="td-name">{supplier?.name || "—"}</td>
-                  <td>{po.items.length} items</td>
-                  <td className="td-price">₱{po.total.toLocaleString()}</td>
-                  <td className="td-small">{po.expectedDate}</td>
+                  <td>{po.items.length} item{po.items.length !== 1 ? "s" : ""}</td>
+                  <td className="td-price">{fmt(po.total)}</td>
+                  <td className="td-small">{po.expectedDate || "—"}</td>
                   <td>
                     <Badge color={statusColor[po.status]}>
                       {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
                     </Badge>
                   </td>
                   <td>
-                    {(po.status === "pending" || po.status === "transit") ? (
-                      <Btn size="sm" variant="success" onClick={() => receiveOrder(po)}>
-                        <Icon name="check" size={12} /> Receive
+                    <div className="btn-row">
+                      {/* Overview */}
+                      <Btn size="sm" variant="secondary" onClick={() => openView(po)} title="View details">
+                        <Icon name="search" size={12} />
                       </Btn>
-                    ) : (
-                      <span className="td-small">Received {po.receivedDate}</span>
-                    )}
+                      {/* Re-purchase */}
+                      <Btn size="sm" variant="secondary" onClick={() => openRepurchase(po)} title="Re-purchase">
+                        <Icon name="refresh" size={12} />
+                      </Btn>
+                      {/* Receive */}
+                      {(po.status === "pending" || po.status === "transit") ? (
+                        <Btn size="sm" variant="success" onClick={() => receiveOrder(po)}>
+                          <Icon name="check" size={12} /> Receive
+                        </Btn>
+                      ) : (
+                        <span className="td-small" style={{ color: "var(--color-green)", fontWeight: 600 }}>
+                          ✓ {po.receivedDate}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -110,13 +281,115 @@ export default function PurchasingManagement({
         </table>
       </div>
 
-      {/* Create PO Modal */}
+      {/* ═══════════════════════════════════════════════════════
+          PO OVERVIEW MODAL
+      ═══════════════════════════════════════════════════════ */}
+      {viewPO && (
+        <Modal
+          open={modal === "view"}
+          onClose={() => setModal(null)}
+          title={`PO Overview — ${viewPO.id.toString().toUpperCase()}`}
+          maxWidth={600}
+        >
+          {/* Header info */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20,
+            background: "var(--color-indigo-light)", borderRadius: "var(--radius-lg)", padding: "14px 18px",
+          }}>
+            {[
+              { label: "Supplier",       value: suppliers.find(s => s.id === viewPO.supplierId)?.name ?? "—" },
+              { label: "Date Created",   value: viewPO.date },
+              { label: "Expected Date",  value: viewPO.expectedDate || "—" },
+              { label: "Received Date",  value: viewPO.receivedDate || "—" },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <div style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)", marginTop: 2 }}>{value}</div>
+              </div>
+            ))}
+            <div>
+              <div style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</div>
+              <div style={{ marginTop: 4 }}>
+                <Badge color={statusColor[viewPO.status]}>
+                  {viewPO.status.charAt(0).toUpperCase() + viewPO.status.slice(1)}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--color-indigo)", marginTop: 2 }}>{fmt(viewPO.total)}</div>
+            </div>
+          </div>
+
+          {/* Items table */}
+          <p style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+            Order Items ({viewPO.items.length})
+          </p>
+          <div className="table-wrap" style={{ marginBottom: 20 }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Qty</th>
+                  <th>Unit Cost</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {viewPO.items.map((item, i) => {
+                  const prod = products.find(p => p.id === item.productId);
+                  const meta = prod ? (CATEGORY_META[prod.category] ?? CATEGORY_META["Other"]) : null;
+                  return (
+                    <tr key={i}>
+                      <td className="td-name">{prod?.name ?? item.productId}</td>
+                      <td>
+                        {meta ? (
+                          <span className="cat-pill" style={{ background: meta.bg, border: `1px solid ${meta.border}`, color: meta.color, fontSize: 11 }}>
+                            {meta.emoji} {prod.category}
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td>{item.qty}</td>
+                      <td>{fmt(item.unitCost)}</td>
+                      <td className="td-price">{fmt(item.qty * item.unitCost)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Btn variant="secondary" onClick={() => openRepurchase(viewPO)}>
+              <Icon name="refresh" size={13} /> Re-purchase this PO
+            </Btn>
+            <Btn onClick={() => setModal(null)}>Close</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════
+          CREATE / RE-PURCHASE PO MODAL
+      ═══════════════════════════════════════════════════════ */}
       <Modal
-        open={modal === "create"}
+        open={modal === "create" || modal === "repurchase"}
         onClose={() => setModal(null)}
-        title="Create Purchase Order"
-        maxWidth={680}
+        title={modal === "repurchase"
+          ? `Re-Purchase — ${viewPO?.id?.toString().toUpperCase()}`
+          : "Create Purchase Order"}
+        maxWidth={760}
       >
+        {modal === "repurchase" && (
+          <div style={{
+            background: "#dbeafe", border: "1px solid #93c5fd", borderRadius: "var(--radius-md)",
+            padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#1d4ed8", fontWeight: 600,
+          }}>
+            📋 Pre-filled from original PO. Adjust quantities or costs as needed, then submit.
+          </div>
+        )}
+
+        {/* Supplier + date */}
         <div className="form-grid-2 mb-16">
           <Field label="Supplier" required>
             <select
@@ -137,40 +410,141 @@ export default function PurchasingManagement({
           </Field>
         </div>
 
+        {/* ── Order Items ── */}
         <p className="field__label" style={{ marginBottom: 10 }}>Order Items</p>
+
         {poItems.map((item, i) => (
-          <div key={i} className="po-item-row">
-            <select
-              className="select"
-              value={item.productId}
-              onChange={e => {
-                const p = products.find(p => p.id === e.target.value);
-                updateItem(i, "productId", e.target.value);
-                if (p) updateItem(i, "unitCost", p.cost);
-              }}
-            >
-              <option value="">Select product…</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <input className="input" type="number" placeholder="Qty"       value={item.qty}      onChange={e => updateItem(i, "qty",      e.target.value)} />
-            <input className="input" type="number" placeholder="Unit Cost" value={item.unitCost} onChange={e => updateItem(i, "unitCost", e.target.value)} />
-            <button onClick={() => removeItem(i)} className="btn btn--danger btn--sm">
-              <Icon name="x" size={13} />
-            </button>
+          <div key={i} style={{
+            border: item.isNew ? "1.5px dashed var(--color-indigo-mid)" : "1px solid var(--color-border)",
+            borderRadius: "var(--radius-lg)", padding: "14px 16px", marginBottom: 12,
+            background: item.isNew ? "var(--color-indigo-light)" : "var(--color-surface)",
+          }}>
+            {/* Row header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: item.isNew ? "var(--color-indigo)" : "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {item.isNew ? "✨ New Product" : `Item ${i + 1}`}
+              </span>
+              <button onClick={() => removeItem(i)} className="btn btn--danger btn--sm" style={{ padding: "3px 8px" }}>
+                <Icon name="x" size={13} />
+              </button>
+            </div>
+
+            {item.isNew ? (
+              /* ── NEW PRODUCT FIELDS ── */
+              <div>
+                <div className="form-grid-2" style={{ marginBottom: 10 }}>
+                  <Field label="Product Name" required>
+                    <input
+                      className="input"
+                      placeholder="e.g. Coke 500ml"
+                      value={item.newName}
+                      onChange={e => updateItem(i, "newName", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Category">
+                    <select
+                      className="select"
+                      value={item.newCategory}
+                      onChange={e => updateItem(i, "newCategory", e.target.value)}
+                    >
+                      {CATEGORIES.map(c => {
+                        const meta = CATEGORY_META[c] ?? CATEGORY_META["Other"];
+                        return <option key={c} value={c}>{meta.emoji} {c}</option>;
+                      })}
+                    </select>
+                  </Field>
+                </div>
+                <div className="form-grid-2" style={{ marginBottom: 10 }}>
+                  <Field label="SKU (auto-assigned)">
+                    <div style={{ position: "relative" }}>
+                      <input
+                        className="input"
+                        value={item.newSku}
+                        readOnly
+                        tabIndex={-1}
+                        style={{ background: "#f1f5f9", color: "#475569", fontWeight: 700, cursor: "not-allowed", paddingRight: 60 }}
+                      />
+                      <span style={{
+                        position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
+                        fontSize: 10, fontWeight: 700, color: "#94a3b8",
+                        background: "#e2e8f0", borderRadius: 4, padding: "2px 6px",
+                      }}>AUTO</span>
+                    </div>
+                  </Field>
+                  <Field label="Unit">
+                    <select className="select" value={item.newUnit} onChange={e => updateItem(i, "newUnit", e.target.value)}>
+                      {["piece", "pack", "bottle", "box", "bag", "sachet", "can", "kg", "liter"].map(u =>
+                        <option key={u} value={u}>{u}</option>
+                      )}
+                    </select>
+                  </Field>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
+                  <Field label="Cost Price (₱)" required>
+                    <input className="input" type="number" placeholder="0.00" value={item.newCost}
+                      onChange={e => updateItem(i, "newCost", e.target.value)} />
+                  </Field>
+                  <Field label="Selling Price (₱)">
+                    <input className="input" type="number" placeholder="0.00" value={item.newPrice}
+                      onChange={e => updateItem(i, "newPrice", e.target.value)} />
+                  </Field>
+                  <Field label="Opening Stock">
+                    <input className="input" type="number" placeholder="0" value={item.newStock}
+                      onChange={e => updateItem(i, "newStock", e.target.value)} />
+                  </Field>
+                  <Field label="Order Qty" required>
+                    <input className="input" type="number" placeholder="1" value={item.qty}
+                      onChange={e => updateItem(i, "qty", e.target.value)} />
+                  </Field>
+                </div>
+              </div>
+            ) : (
+              /* ── EXISTING PRODUCT FIELDS ── */
+              <div className="po-item-row">
+                <select
+                  className="select"
+                  value={item.productId}
+                  onChange={e => updateItem(i, "productId", e.target.value)}
+                  style={{ flex: 2 }}
+                >
+                  <option value="">Select product…</option>
+                  {products.map(p => {
+                    const meta = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
+                    return <option key={p.id} value={p.id}>{meta.emoji} {p.name} (Stock: {p.stock})</option>;
+                  })}
+                </select>
+                <input className="input" type="number" placeholder="Qty"
+                  value={item.qty} onChange={e => updateItem(i, "qty", e.target.value)} style={{ width: 80 }} />
+                <input className="input" type="number" placeholder="Unit Cost"
+                  value={item.unitCost} onChange={e => updateItem(i, "unitCost", e.target.value)} style={{ width: 110 }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-indigo)", minWidth: 90, textAlign: "right" }}>
+                  {fmt(+item.qty * +item.unitCost)}
+                </span>
+              </div>
+            )}
           </div>
         ))}
 
-        <Btn variant="secondary" size="sm" onClick={addItem} icon="plus" className="mb-16">
-          Add Item
-        </Btn>
+        {/* Add item buttons */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <Btn variant="secondary" size="sm" onClick={addExistingItem} icon="plus">
+            Add Existing Product
+          </Btn>
+          <Btn variant="secondary" size="sm" onClick={addNewProductItem}>
+            ✨ Add New Product
+          </Btn>
+        </div>
 
+        {/* Total bar */}
         <div className="po-total-bar">
-          Total: <strong>₱{poRunningTotal.toLocaleString()}</strong>
+          Total: <strong>{fmt(poRunningTotal)}</strong>
         </div>
 
         <div className="modal__footer">
           <Btn variant="secondary" onClick={() => setModal(null)}>Cancel</Btn>
-          <Btn onClick={savePO}>Submit PO</Btn>
+          <Btn onClick={savePO} disabled={saving}>
+            {saving ? "Saving…" : modal === "repurchase" ? "Submit Re-Purchase" : "Submit PO"}
+          </Btn>
         </div>
       </Modal>
     </div>
