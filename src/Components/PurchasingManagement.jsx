@@ -75,7 +75,7 @@ export default function PurchasingManagement({
 
   // ── PO item helpers ────────────────────────────────────────────────────────
   const addExistingItem = () =>
-    setPoItems(prev => [...prev, { isNew: false, productId: "", qty: 1, unitCost: 0 }]);
+    setPoItems(prev => [...prev, { isNew: false, productId: "", qty: 1, unitCost: 0, currentStock: "" }]);
 
   const addNewProductItem = () =>
     setPoItems(prev => [
@@ -90,10 +90,13 @@ export default function PurchasingManagement({
       prev.map((item, idx) => {
         if (idx !== i) return item;
         const updated = { ...item, [k]: v };
-        // Auto-fill cost when selecting an existing product
+        // Auto-fill cost AND current stock when selecting an existing product
         if (k === "productId" && !item.isNew) {
           const p = products.find(p => p.id === v);
-          if (p) updated.unitCost = p.cost;
+          if (p) {
+            updated.unitCost     = p.cost;
+            updated.currentStock = p.stock;  // pre-fill editable current stock
+          }
         }
         // Auto-generate SKU when category changes on a new-product row
         if (k === "newCategory" && item.isNew) {
@@ -110,7 +113,7 @@ export default function PurchasingManagement({
   // ── Open modals ────────────────────────────────────────────────────────────
   const openCreate = () => {
     setForm({ supplierId: suppliers[0]?.id || "", expectedDate: "" });
-    setPoItems([{ isNew: false, productId: "", qty: 1, unitCost: 0 }]);
+    setPoItems([{ isNew: false, productId: "", qty: 1, unitCost: 0, currentStock: "" }]);
     setModal("create");
   };
 
@@ -127,81 +130,102 @@ export default function PurchasingManagement({
     });
     // Pre-fill items from the original PO
     setPoItems(
-      po.items.map(i => ({
-        isNew:     false,
-        productId: i.productId,
-        qty:       i.qty,
-        unitCost:  i.unitCost,
-      }))
+      po.items.map(i => {
+        const prod = products.find(p => p.id === i.productId);
+        return {
+          isNew:        false,
+          productId:    i.productId,
+          qty:          i.qty,
+          unitCost:     i.unitCost,
+          currentStock: prod?.stock ?? "",
+        };
+      })
     );
     setModal("repurchase");
   };
 
-  // ── Save PO (also creates new products first) ──────────────────────────────
+  // ── Save PO — auto-received on creation, stock updated immediately ────────
   const savePO = async () => {
     setSaving(true);
     try {
-      const resolvedItems = [];
+      const resolvedItems  = [];
+      const newProductIds  = new Set(); // IDs of newly-created products (stock already set)
 
       for (const item of poItems) {
         if (item.isNew) {
-          // Validate new product fields
           if (!item.newName.trim()) { alert("Please enter a product name for all new products."); setSaving(false); return; }
 
-          // Create the product in StockManagement via App.jsx callback
           if (onAddProduct) {
+            const orderQty  = +item.qty    || 0;
+            const openStock = +item.newStock || 0;
             const newProduct = {
               id:           "p" + Date.now() + Math.random(),
               name:         item.newName.trim(),
               sku:          item.newSku,
               category:     item.newCategory,
               supplierId:   form.supplierId,
-              cost:         +item.newCost || 0,
+              cost:         +item.newCost  || 0,
               price:        +item.newPrice || 0,
-              stock:        +item.newStock || 0,
+              stock:        openStock + orderQty,   // opening stock + order qty already baked in
               reserved:     0,
               damaged:      0,
               reorderLevel: 10,
               unit:         item.newUnit,
               variants:     [],
             };
-            const saved = await onAddProduct(newProduct);
+            const saved      = await onAddProduct(newProduct);
             const resolvedId = saved?.id ?? newProduct.id;
-            resolvedItems.push({ productId: resolvedId, qty: +item.qty, unitCost: +item.unitCost || +item.newCost || 0 });
+            newProductIds.add(resolvedId);   // mark as already-stocked
+            resolvedItems.push({ productId: resolvedId, qty: orderQty, unitCost: +item.unitCost || +item.newCost || 0 });
           }
         } else {
           if (!item.productId) continue;
-          resolvedItems.push({ productId: item.productId, qty: +item.qty, unitCost: +item.unitCost });
+          const prod        = products.find(p => p.id === item.productId);
+          const orderQty    = +item.qty;
+          // currentStock is the editable "current stock" field; use it as the base.
+          // We pass the delta so onReceivePO (which does p.stock + item.qty) ends up
+          // at the correct total: editedCurrentStock + orderQty.
+          // Delta = (editedCurrentStock + orderQty) - actualDbStock
+          const editedBase  = item.currentStock !== "" ? +item.currentStock : (prod?.stock ?? 0);
+          const actualStock = prod?.stock ?? 0;
+          const delta       = (editedBase - actualStock) + orderQty;  // net change to apply
+          resolvedItems.push({ productId: item.productId, qty: delta, unitCost: +item.unitCost, _orderQty: orderQty });
         }
       }
 
       if (resolvedItems.length === 0) { alert("Please add at least one item to the PO."); setSaving(false); return; }
 
-      const total = resolvedItems.reduce((s, i) => s + i.qty * i.unitCost, 0);
+      const today = new Date().toISOString().slice(0, 10);
+      // For the PO total, use the actual ordered qty (not the stock delta)
+      const total = resolvedItems.reduce((s, i) => s + (i._orderQty ?? i.qty) * i.unitCost, 0);
+      // Strip internal _orderQty before saving
+      const poItemsClean = resolvedItems.map(({ _orderQty, ...rest }) => rest);
       const newPO = {
         id:           "po" + Date.now(),
-        date:         new Date().toISOString().slice(0, 10),
+        date:         today,
         supplierId:   form.supplierId,
-        items:        resolvedItems,
-        status:       "pending",
+        items:        poItemsClean,
+        status:       "received",
         total,
-        expectedDate: form.expectedDate,
-        receivedDate: null,
+        expectedDate: today,
+        receivedDate: today,
       };
 
       if (onCreatePO) await onCreatePO(newPO);
+
+      // Only increment stock for existing products — new products already have correct stock
+      const existingItems = resolvedItems.filter(ri => !newProductIds.has(ri.productId));
+      if (onReceivePO && existingItems.length > 0) {
+        // Strip _orderQty for the receive call too
+        await onReceivePO({ ...newPO, items: existingItems.map(({ _orderQty, ...rest }) => rest) });
+      }
+
       setModal(null);
     } catch (err) {
       alert("Failed to save PO: " + err.message);
     } finally {
       setSaving(false);
     }
-  };
-
-  // ── Receive delivery ───────────────────────────────────────────────────────
-  const receiveOrder = async (po) => {
-    if (!window.confirm(`Mark PO ${po.id.toUpperCase()} as received? This will update stock levels.`)) return;
-    if (onReceivePO) await onReceivePO(po);
   };
 
   const poRunningTotal = poItems.reduce((s, i) => s + +i.qty * +(i.unitCost || i.newCost || 0), 0);
@@ -262,16 +286,10 @@ export default function PurchasingManagement({
                       <Btn size="sm" variant="secondary" onClick={() => openRepurchase(po)} title="Re-purchase">
                         <Icon name="refresh" size={12} />
                       </Btn>
-                      {/* Receive */}
-                      {(po.status === "pending" || po.status === "transit") ? (
-                        <Btn size="sm" variant="success" onClick={() => receiveOrder(po)}>
-                          <Icon name="check" size={12} /> Receive
-                        </Btn>
-                      ) : (
-                        <span className="td-small" style={{ color: "var(--color-green)", fontWeight: 600 }}>
-                          ✓ {po.receivedDate}
-                        </span>
-                      )}
+                      {/* Received date */}
+                      <span className="td-small" style={{ color: "var(--color-green)", fontWeight: 600 }}>
+                        ✓ {po.receivedDate}
+                      </span>
                     </div>
                   </td>
                 </tr>
@@ -389,7 +407,7 @@ export default function PurchasingManagement({
           </div>
         )}
 
-        {/* Supplier + date */}
+        {/* Supplier */}
         <div className="form-grid-2 mb-16">
           <Field label="Supplier" required>
             <select
@@ -400,14 +418,13 @@ export default function PurchasingManagement({
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </Field>
-          <Field label="Expected Delivery">
-            <input
-              className="input"
-              type="date"
-              value={form.expectedDate}
-              onChange={e => setForm(f => ({ ...f, expectedDate: e.target.value }))}
-            />
-          </Field>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "#f0fdf4", border: "1px solid #bbf7d0",
+            borderRadius: "var(--radius-md)", padding: "10px 14px", fontSize: 13, color: "#15803d", fontWeight: 600,
+          }}>
+            ✅ Purchase will be marked as <strong>Received</strong> today ({new Date().toISOString().slice(0, 10)})
+          </div>
         </div>
 
         {/* ── Order Items ── */}
@@ -500,26 +517,105 @@ export default function PurchasingManagement({
               </div>
             ) : (
               /* ── EXISTING PRODUCT FIELDS ── */
-              <div className="po-item-row">
-                <select
-                  className="select"
-                  value={item.productId}
-                  onChange={e => updateItem(i, "productId", e.target.value)}
-                  style={{ flex: 2 }}
-                >
-                  <option value="">Select product…</option>
-                  {products.map(p => {
-                    const meta = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
-                    return <option key={p.id} value={p.id}>{meta.emoji} {p.name} (Stock: {p.stock})</option>;
-                  })}
-                </select>
-                <input className="input" type="number" placeholder="Qty"
-                  value={item.qty} onChange={e => updateItem(i, "qty", e.target.value)} style={{ width: 80 }} />
-                <input className="input" type="number" placeholder="Unit Cost"
-                  value={item.unitCost} onChange={e => updateItem(i, "unitCost", e.target.value)} style={{ width: 110 }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-indigo)", minWidth: 90, textAlign: "right" }}>
-                  {fmt(+item.qty * +item.unitCost)}
-                </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+                  <div style={{ flex: 2, minWidth: 160 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 4 }}>
+                      Product
+                    </label>
+                    <select
+                      className="select"
+                      value={item.productId}
+                      onChange={e => updateItem(i, "productId", e.target.value)}
+                    >
+                      <option value="">Select product…</option>
+                      {products
+                        .filter(p => !form.supplierId || p.supplierId === form.supplierId)
+                        .map(p => {
+                          const meta = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
+                          return <option key={p.id} value={p.id}>{meta.emoji} {p.name} (Stock: {p.stock})</option>;
+                        })}
+                    </select>
+                  </div>
+                  <div style={{ width: 100 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 4 }}>
+                      Current Stock
+                    </label>
+                    <input
+                      className="input"
+                      type="number"
+                      placeholder="—"
+                      value={item.currentStock}
+                      onChange={e => updateItem(i, "currentStock", e.target.value)}
+                      style={{ background: item.productId ? "#fff" : "#f8fafc" }}
+                    />
+                  </div>
+                  <div style={{ width: 80 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 4 }}>
+                      Order Qty
+                    </label>
+                    <input className="input" type="number" placeholder="Qty"
+                      value={item.qty} onChange={e => updateItem(i, "qty", e.target.value)} />
+                  </div>
+                  <div style={{ width: 120 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 4 }}>
+                      Cost Price (₱)
+                    </label>
+                    <input className="input" type="number" placeholder="0.00"
+                      value={item.unitCost} onChange={e => updateItem(i, "unitCost", e.target.value)} />
+                  </div>
+                  <div style={{ minWidth: 90, textAlign: "right", paddingBottom: 6 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                      Subtotal
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-indigo)" }}>
+                      {fmt(+item.qty * +item.unitCost)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stock preview strip */}
+                {item.productId && (() => {
+                  const prod = products.find(p => p.id === item.productId);
+                  if (!prod) return null;
+                  const base      = item.currentStock !== "" ? +item.currentStock : prod.stock;
+                  const newTotal  = base + (+item.qty || 0);
+                  const stockChanged = item.currentStock !== "" && +item.currentStock !== prod.stock;
+                  return (
+                    <div style={{
+                      fontSize: 12, borderRadius: 6, padding: "8px 12px",
+                      background: "var(--color-surface-2, #f8fafc)",
+                      border: "1px solid var(--color-border)",
+                      display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center",
+                    }}>
+                      <span>
+                        Last cost: <strong style={{ color: "var(--color-text-primary)" }}>₱{prod.cost}</strong>
+                      </span>
+                      <span>
+                        Selling price: <strong style={{ color: "var(--color-text-primary)" }}>₱{prod.price}</strong>
+                      </span>
+                      <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                        {stockChanged && (
+                          <span style={{ color: "#b45309", fontWeight: 600 }}>
+                            DB: {prod.stock} → edited: {+item.currentStock}
+                          </span>
+                        )}
+                        <span style={{ color: "var(--color-text-muted)" }}>
+                          After receive:
+                        </span>
+                        <span style={{
+                          fontWeight: 800, fontSize: 13,
+                          color: newTotal > prod.stock ? "#15803d" : "var(--color-text-primary)",
+                          background: newTotal > prod.stock ? "#dcfce7" : "#f1f5f9",
+                          border: `1px solid ${newTotal > prod.stock ? "#86efac" : "#e2e8f0"}`,
+                          borderRadius: 5, padding: "2px 8px",
+                        }}>
+                          {newTotal} {prod.unit}s
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -543,7 +639,7 @@ export default function PurchasingManagement({
         <div className="modal__footer">
           <Btn variant="secondary" onClick={() => setModal(null)}>Cancel</Btn>
           <Btn onClick={savePO} disabled={saving}>
-            {saving ? "Saving…" : modal === "repurchase" ? "Submit Re-Purchase" : "Submit PO"}
+            {saving ? "Saving…" : modal === "repurchase" ? "Submit Re-Purchase" : "✅ Submit & Receive"}
           </Btn>
         </div>
       </Modal>

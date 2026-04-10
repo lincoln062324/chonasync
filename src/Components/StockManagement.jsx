@@ -3,42 +3,15 @@ import Icon from "../Components/Icon";
 import { Badge, Btn, Modal, Field } from "../Components/Primitives";
 import { CATEGORIES, CATEGORY_META } from "../data/constants";
 
-// ── SKU prefix per category ────────────────────────────────────────────────
-const SKU_PREFIX = {
-  "Beverages":        "BEV",
-  "Snacks":           "SNK",
-  "Canned/Dry Goods": "FD",
-  "Household":        "HH",
-  "Personal Care":    "PC",
-  "Dairy":            "DAI",
-  "Condiments":       "COND",
-  "Cigarettes":       "CIG",
-  "Hygiene":          "HYG",
-  "Groceries":        "GRC",
-  "Other":            "OTH",
-};
-
-function generateSKU(category, existingProducts) {
-  const prefix  = SKU_PREFIX[category] ?? "OTH";
-  const pattern = new RegExp(`^${prefix}-(\\d+)$`, "i");
-  let max = 0;
-  for (const p of existingProducts) {
-    const m = p.sku?.match(pattern);
-    if (m) max = Math.max(max, parseInt(m[1], 10));
-  }
-  return `${prefix}-${String(max + 1).padStart(3, "0")}`;
-}
-
 export default function StockManagement({
   products,
   suppliers,
-  onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
 }) {
   const [search,    setSearch]    = useState("");
   const [catFilter, setCatFilter] = useState("All");
-  const [modal,     setModal]     = useState(null);  // "add" | "edit" | "adjust" | null
+  const [modal,     setModal]     = useState(null);  // "edit" | "adjust" | null
   const [selected,  setSelected]  = useState(null);
   const [form,      setForm]      = useState({});
 
@@ -56,27 +29,9 @@ export default function StockManagement({
      p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
-  // ── Modal openers ──────────────────────────────────────────────────────────
-  const openAdd = () => {
-    const initialCategory = catFilter !== "All" ? catFilter : "Beverages";
-    setForm({
-      name: "", sku: generateSKU(initialCategory, products),
-      category: initialCategory,
-      supplierId: suppliers[0]?.id || "",
-      cost: "", price: "", stock: "", reserved: 0, damaged: 0, reorderLevel: 10, unit: "piece",
-    });
-    setModal("add");
-  };
-
-  // Re-generate SKU when category changes in the Add form
+  // Re-generate SKU when category changes in the form
   const handleFormChange = (key, value) => {
-    setForm(prev => {
-      const updated = { ...prev, [key]: value };
-      if (key === "category" && modal === "add") {
-        updated.sku = generateSKU(value, products);
-      }
-      return updated;
-    });
+    setForm(prev => ({ ...prev, [key]: value }));
   };
   const openEdit = p => { setSelected(p); setForm({ ...p }); setModal("edit"); };
   const openAdj  = p => { setSelected(p); setForm({ stock: p.stock, damaged: p.damaged, note: "" }); setModal("adjust"); };
@@ -85,20 +40,7 @@ export default function StockManagement({
 
   // ── Save ───────────────────────────────────────────────────────────────────
   const save = async () => {
-    if (modal === "add") {
-      const newProduct = {
-        ...form,
-        id: "p" + Date.now(),
-        stock:        +form.stock,
-        cost:         +form.cost,
-        price:        +form.price,
-        reserved:     +form.reserved,
-        damaged:      +form.damaged,
-        reorderLevel: +form.reorderLevel,
-        variants: [],
-      };
-      if (onAddProduct) await onAddProduct(newProduct);
-    } else if (modal === "edit") {
+    if (modal === "edit") {
       const updatedFields = {
         ...form,
         stock:        +form.stock,
@@ -187,7 +129,6 @@ export default function StockManagement({
               {catFilter !== "All" ? ` in ${catFilter}` : " tracked"}
             </p>
           </div>
-          <Btn onClick={openAdd} icon="plus">Add Product</Btn>
         </div>
 
         {/* Search */}
@@ -275,7 +216,7 @@ export default function StockManagement({
           {filtered.length === 0 && (
             <div className="table-empty">
               {catFilter !== "All"
-                ? `No products in "${catFilter}" yet. Click "Add Product" to add one.`
+                ? `No products in "${catFilter}" yet. Add products via Purchasing.`
                 : "No products found."}
             </div>
           )}
@@ -285,7 +226,7 @@ export default function StockManagement({
         {filtered.length === 0 ? (
           <div className="stock-card-empty">
             {catFilter !== "All"
-              ? `No products in "${catFilter}" yet. Tap "Add Product" to add one.`
+              ? `No products in "${catFilter}" yet. Add products via Purchasing.`
               : "No products found."}
           </div>
         ) : (
@@ -353,43 +294,19 @@ export default function StockManagement({
         )}
       </div>
 
-      {/* ══ Add / Edit Modal ══ */}
+      {/* ══ Edit Modal ══ */}
       <Modal
-        open={modal === "add" || modal === "edit"}
+        open={modal === "edit"}
         onClose={() => setModal(null)}
-        title={modal === "add" ? "Add Product" : "Edit Product"}
+        title="Edit Product"
         maxWidth={640}
       >
         <div className="form-grid-2">
           <Field label="Product Name" required>
             <input className="input" value={form.name || ""} onChange={f("name")} />
           </Field>
-          <Field label={modal === "add" ? "SKU (auto-assigned)" : "SKU"} required>
-            {modal === "add" ? (
-              <div style={{ position: "relative" }}>
-                <input
-                  className="input"
-                  value={form.sku || ""}
-                  readOnly
-                  tabIndex={-1}
-                  style={{
-                    background: "#f1f5f9", color: "#475569",
-                    fontWeight: 700, letterSpacing: "0.04em",
-                    cursor: "not-allowed", paddingRight: 72,
-                  }}
-                />
-                <span style={{
-                  position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-                  fontSize: 11, fontWeight: 600, color: "#94a3b8",
-                  background: "#e2e8f0", borderRadius: 4, padding: "2px 7px",
-                  pointerEvents: "none",
-                }}>
-                  AUTO
-                </span>
-              </div>
-            ) : (
-              <input className="input" value={form.sku || ""} onChange={f("sku")} />
-            )}
+          <Field label="SKU" required>
+            <input className="input" value={form.sku || ""} onChange={f("sku")} />
           </Field>
           <Field label="Category">
             <select className="select" value={form.category || ""} onChange={f("category")}>
