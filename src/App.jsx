@@ -27,6 +27,7 @@ import AccountsActivity     from "./Components/AccountsActivity";
 import BottleDeposit        from "./Components/BottleDeposit";
 import UserProfile          from "./Components/UserProfile";
 import BottomNav            from "./Components/BottomNav";
+import ShoppingList         from "./Components/ShoppingList";
 import { fetchBottleDeposits } from "./Components/BottleDeposit";
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
   const [transactions,   setTransactions]   = useState([]);
   const [loadProducts,   setLoadProducts]   = useState([]);
   const [activeModule,   setActiveModule]   = useState("dashboard");
+  const [prefillPOItems, setPrefillPOItems] = useState(null);  // from ShoppingList → Purchasing
   const [bottleDeposits, setBottleDeposits] = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [dbError,        setDbError]        = useState(null);
@@ -223,6 +225,8 @@ export default function App() {
             <PurchasingManagement
               purchaseOrders={purchaseOrders} setPurchaseOrders={setPurchaseOrders}
               products={products} setProducts={setProducts} suppliers={suppliers}
+              prefillItems={prefillPOItems}
+              onPrefillConsumed={() => setPrefillPOItems(null)}
               onAddProduct={async (p) => { const s = await createProduct(p); setProducts(prev => [...prev, s]); return s; }}
               onCreatePO={async (po) => { const s = await createPurchaseOrder(po); setPurchaseOrders(prev => [s, ...prev]); }}
               onReceivePO={async (po) => {
@@ -233,6 +237,18 @@ export default function App() {
                   const item = po.items.find(i => i.productId === p.id);
                   return item ? { ...p, stock: p.stock + item.qty } : p;
                 }));
+              }}
+            />
+          )}
+
+          {activeModule === "shopping-list" && (
+            <ShoppingList
+              products={products}
+              suppliers={suppliers}
+              setActiveModule={navigate}
+              onSendToPurchasing={(items, supplierId) => {
+                setPrefillPOItems({ items, supplierId });
+                navigate("purchasing");
               }}
             />
           )}

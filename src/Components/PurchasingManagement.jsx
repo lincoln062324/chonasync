@@ -1,7 +1,168 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Icon from "../Components/Icon";
 import { Badge, Btn, Modal, Field } from "../Components/Primitives";
 import { CATEGORIES, CATEGORY_META } from "../data/constants";
+
+// ── Searchable product autocomplete ───────────────────────────────────────────
+function ProductSearchInput({ products, value, onChange, placeholder = "Search product…" }) {
+  const [query,   setQuery]   = useState("");
+  const [open,    setOpen]    = useState(false);
+  const [focused, setFocused] = useState(false);
+  const wrapRef  = useRef(null);
+  const inputRef = useRef(null);
+
+  const selected = products.find(p => p.id === value) ?? null;
+
+  useEffect(() => {
+    function onDown(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false); setFocused(false); setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const q = query.trim().toLowerCase();
+  const suggestions = q.length === 0
+    ? products
+    : products.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        (p.sku      && p.sku.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q))
+      );
+
+  const pick = (prod) => {
+    onChange(prod.id);
+    setQuery(""); setOpen(false); setFocused(false);
+  };
+
+  const clearSelection = (e) => {
+    e.stopPropagation();
+    onChange("");
+    setQuery("");
+    setTimeout(() => { setOpen(true); setFocused(true); inputRef.current?.focus(); }, 0);
+  };
+
+  const highlight = (text) => {
+    if (!q) return text;
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark style={{ background: "#fef08a", borderRadius: 2, padding: "0 1px" }}>
+          {text.slice(idx, idx + q.length)}
+        </mark>
+        {text.slice(idx + q.length)}
+      </>
+    );
+  };
+
+  return (
+    <div ref={wrapRef} style={{ position: "relative" }}>
+      <div
+        onClick={() => { setOpen(true); setFocused(true); inputRef.current?.focus(); }}
+        style={{
+          display: "flex", alignItems: "center",
+          border: `1.5px solid ${focused ? "var(--color-indigo,#6366f1)" : "var(--color-border,#e2e8f0)"}`,
+          borderRadius: "var(--radius-md,8px)", background: "#fff",
+          transition: "border-color .15s", overflow: "hidden", cursor: "text",
+        }}
+      >
+        <span style={{ paddingLeft: 10, color: "#94a3b8", flexShrink: 0, display: "flex", alignItems: "center" }}>
+          <Icon name="search" size={14} />
+        </span>
+
+        {selected && !focused ? (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, padding: "0 6px", minWidth: 0, height: 38 }}>
+            <span style={{ fontSize: 16 }}>{(CATEGORY_META[selected.category] ?? CATEGORY_META["Other"]).emoji}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {selected.name}
+            </span>
+            <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>{selected.sku}</span>
+          </div>
+        ) : (
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            placeholder={selected ? selected.name : placeholder}
+            onChange={e => { setQuery(e.target.value); setOpen(true); }}
+            onFocus={() => { setFocused(true); setOpen(true); }}
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              padding: "9px 8px 9px 6px", fontSize: 13, color: "var(--color-text-primary)",
+            }}
+          />
+        )}
+
+        {selected && (
+          <button
+            onMouseDown={clearSelection}
+            title="Clear"
+            style={{
+              flexShrink: 0, padding: "0 10px", height: "100%", border: "none",
+              background: "transparent", color: "#94a3b8", cursor: "pointer",
+              fontSize: 18, lineHeight: 1, display: "flex", alignItems: "center",
+            }}
+          >×</button>
+        )}
+      </div>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+          background: "#fff", border: "1.5px solid var(--color-border,#e2e8f0)",
+          borderRadius: "var(--radius-md,8px)", boxShadow: "0 8px 24px rgba(0,0,0,.10)",
+          zIndex: 9999, maxHeight: 256, overflowY: "auto",
+        }}>
+          {suggestions.length === 0 ? (
+            <div style={{ padding: "12px 14px", fontSize: 13, color: "#94a3b8" }}>
+              No products match "{query}"
+            </div>
+          ) : suggestions.map(p => {
+            const meta     = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
+            const isActive = p.id === value;
+            return (
+              <div
+                key={p.id}
+                onMouseDown={() => pick(p)}
+                style={{
+                  padding: "9px 12px", cursor: "pointer",
+                  background: isActive ? "#eef2ff" : "transparent",
+                  borderBottom: "1px solid #f1f5f9",
+                  display: "flex", alignItems: "center", gap: 10,
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#f8fafc"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = isActive ? "#eef2ff" : "transparent"; }}
+              >
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{meta.emoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {highlight(p.name)}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
+                    {p.sku} · {p.category}
+                  </div>
+                </div>
+                <span style={{
+                  flexShrink: 0, fontSize: 11, fontWeight: 700,
+                  padding: "2px 8px", borderRadius: 20,
+                  background: p.stock === 0 ? "#fee2e2" : p.stock <= p.reorderLevel ? "#fef9c3" : "#dcfce7",
+                  color:      p.stock === 0 ? "#dc2626" : p.stock <= p.reorderLevel ? "#92400e" : "#15803d",
+                }}>
+                  {p.stock} {p.unit}s
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 // ── SKU prefix per category (mirrors StockManagement) ─────────────────────────
 const SKU_PREFIX = {
@@ -65,13 +226,51 @@ export default function PurchasingManagement({
   suppliers,
   onCreatePO,
   onReceivePO,
-  onAddProduct,   // from App.jsx — creates a new product in StockManagement
+  onAddProduct,
+  prefillItems,        // { items, supplierId } from ShoppingList — auto-opens create modal
+  onPrefillConsumed,   // clears prefill after modal opens
 }) {
   const [modal,     setModal]     = useState(null); // "create" | "view" | "repurchase"
   const [form,      setForm]      = useState({ supplierId: "", expectedDate: "" });
   const [poItems,   setPoItems]   = useState([{ isNew: false, productId: "", qty: 1, unitCost: 0 }]);
   const [viewPO,    setViewPO]    = useState(null);
   const [saving,    setSaving]    = useState(false);
+
+  // ── Consume prefill from ShoppingList ──────────────────────────────────────
+  useEffect(() => {
+    if (!prefillItems) return;
+    const { items, supplierId } = prefillItems;
+    setForm({ supplierId: supplierId || suppliers[0]?.id || "", expectedDate: "" });
+    setPoItems(items.map(it => {
+      if (it.productId) {
+        // Existing product row
+        const prod = products.find(p => p.id === it.productId);
+        return {
+          isNew:        false,
+          productId:    it.productId,
+          qty:          it.qty || 1,
+          unitCost:     prod?.cost ?? 0,
+          currentStock: prod?.stock ?? "",
+        };
+      }
+      // New product row
+      return {
+        isNew:       true,
+        productId:   "",
+        newName:     it.newName || it.name || "",
+        newCategory: it.newCategory || "Other",
+        newSku:      generateSKU(it.newCategory || "Other", products, []),
+        newCost:     it.newCost || "",
+        newPrice:    it.newPrice || "",
+        newStock:    0,
+        newUnit:     it.newUnit || it.unit || "piece",
+        qty:         it.qty || 1,
+        unitCost:    it.newCost || "",
+      };
+    }));
+    setModal("create");
+    if (onPrefillConsumed) onPrefillConsumed();
+  }, [prefillItems]);
 
   // ── PO item helpers ────────────────────────────────────────────────────────
   const addExistingItem = () =>
@@ -519,23 +718,16 @@ export default function PurchasingManagement({
               /* ── EXISTING PRODUCT FIELDS ── */
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-                  <div style={{ flex: 2, minWidth: 160 }}>
+                  <div style={{ flex: 2, minWidth: 200 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 4 }}>
                       Product
                     </label>
-                    <select
-                      className="select"
+                    <ProductSearchInput
+                      products={products.filter(p => !form.supplierId || p.supplierId === form.supplierId)}
                       value={item.productId}
-                      onChange={e => updateItem(i, "productId", e.target.value)}
-                    >
-                      <option value="">Select product…</option>
-                      {products
-                        .filter(p => !form.supplierId || p.supplierId === form.supplierId)
-                        .map(p => {
-                          const meta = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
-                          return <option key={p.id} value={p.id}>{meta.emoji} {p.name} (Stock: {p.stock})</option>;
-                        })}
-                    </select>
+                      onChange={id => updateItem(i, "productId", id)}
+                      placeholder="Search by name, SKU, or category…"
+                    />
                   </div>
                   <div style={{ width: 100 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 4 }}>
