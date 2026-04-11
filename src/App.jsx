@@ -231,8 +231,6 @@ export default function App() {
               onCreatePO={async (po) => { const s = await createPurchaseOrder(po); setPurchaseOrders(prev => [s, ...prev]); }}
               onReceivePO={async (po) => {
                 await receivePurchaseOrder(po);
-                setPurchaseOrders(prev => prev.map(p => p.id === po.id
-                  ? { ...p, status:"received", receivedDate: new Date().toISOString().slice(0,10) } : p));
                 setProducts(prev => prev.map(p => {
                   const item = po.items.find(i => i.productId === p.id);
                   return item ? { ...p, stock: p.stock + item.qty } : p;

@@ -201,8 +201,6 @@ function generateSKU(category, existingProducts, pendingItems = []) {
 const fmt = (n) =>
   `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const statusColor = { pending: "yellow", transit: "blue", received: "green", cancelled: "red" };
-
 // ── Blank new-product row ──────────────────────────────────────────────────────
 function blankNewProduct(categories) {
   return {
@@ -231,7 +229,7 @@ export default function PurchasingManagement({
   onPrefillConsumed,   // clears prefill after modal opens
 }) {
   const [modal,     setModal]     = useState(null); // "create" | "view" | "repurchase"
-  const [form,      setForm]      = useState({ supplierId: "", expectedDate: "" });
+  const [form,      setForm]      = useState({ supplierId: "" });
   const [poItems,   setPoItems]   = useState([{ isNew: false, productId: "", qty: 1, unitCost: 0 }]);
   const [viewPO,    setViewPO]    = useState(null);
   const [saving,    setSaving]    = useState(false);
@@ -240,7 +238,7 @@ export default function PurchasingManagement({
   useEffect(() => {
     if (!prefillItems) return;
     const { items, supplierId } = prefillItems;
-    setForm({ supplierId: supplierId || suppliers[0]?.id || "", expectedDate: "" });
+    setForm({ supplierId: supplierId || suppliers[0]?.id || "" });
     setPoItems(items.map(it => {
       if (it.productId) {
         // Existing product row
@@ -311,7 +309,7 @@ export default function PurchasingManagement({
 
   // ── Open modals ────────────────────────────────────────────────────────────
   const openCreate = () => {
-    setForm({ supplierId: suppliers[0]?.id || "", expectedDate: "" });
+    setForm({ supplierId: suppliers[0]?.id || "" });
     setPoItems([{ isNew: false, productId: "", qty: 1, unitCost: 0, currentStock: "" }]);
     setModal("create");
   };
@@ -325,7 +323,6 @@ export default function PurchasingManagement({
     setViewPO(po);
     setForm({
       supplierId:   po.supplierId,
-      expectedDate: "",
     });
     // Pre-fill items from the original PO
     setPoItems(
@@ -406,7 +403,6 @@ export default function PurchasingManagement({
         items:        poItemsClean,
         status:       "received",
         total,
-        expectedDate: today,
         receivedDate: today,
       };
 
@@ -449,7 +445,7 @@ export default function PurchasingManagement({
         <table className="data-table">
           <thead>
             <tr>
-              {["PO #", "Date", "Supplier", "Items", "Total", "Expected", "Status", "Actions"].map(h => (
+              {["PO #", "Date", "Supplier", "Items", "Total", "Received", "Actions"].map(h => (
                 <th key={h}>{h}</th>
               ))}
             </tr>
@@ -457,7 +453,7 @@ export default function PurchasingManagement({
           <tbody>
             {purchaseOrders.length === 0 && (
               <tr>
-                <td colSpan={8} className="table-empty">No purchase orders yet. Click "Create PO" to start.</td>
+                <td colSpan={7} className="table-empty">No purchase orders yet. Click "Create PO" to start.</td>
               </tr>
             )}
             {purchaseOrders.map(po => {
@@ -469,26 +465,17 @@ export default function PurchasingManagement({
                   <td className="td-name">{supplier?.name || "—"}</td>
                   <td>{po.items.length} item{po.items.length !== 1 ? "s" : ""}</td>
                   <td className="td-price">{fmt(po.total)}</td>
-                  <td className="td-small">{po.expectedDate || "—"}</td>
-                  <td>
-                    <Badge color={statusColor[po.status]}>
-                      {po.status.charAt(0).toUpperCase() + po.status.slice(1)}
-                    </Badge>
+                  <td className="td-small" style={{ color: "var(--color-green)", fontWeight: 600 }}>
+                    ✓ {po.receivedDate || po.date}
                   </td>
                   <td>
                     <div className="btn-row">
-                      {/* Overview */}
                       <Btn size="sm" variant="secondary" onClick={() => openView(po)} title="View details">
                         <Icon name="search" size={12} />
                       </Btn>
-                      {/* Re-purchase */}
                       <Btn size="sm" variant="secondary" onClick={() => openRepurchase(po)} title="Re-purchase">
                         <Icon name="refresh" size={12} />
                       </Btn>
-                      {/* Received date */}
-                      <span className="td-small" style={{ color: "var(--color-green)", fontWeight: 600 }}>
-                        ✓ {po.receivedDate}
-                      </span>
                     </div>
                   </td>
                 </tr>
@@ -514,28 +501,16 @@ export default function PurchasingManagement({
             background: "var(--color-indigo-light)", borderRadius: "var(--radius-lg)", padding: "14px 18px",
           }}>
             {[
-              { label: "Supplier",       value: suppliers.find(s => s.id === viewPO.supplierId)?.name ?? "—" },
-              { label: "Date Created",   value: viewPO.date },
-              { label: "Expected Date",  value: viewPO.expectedDate || "—" },
-              { label: "Received Date",  value: viewPO.receivedDate || "—" },
+              { label: "Supplier",      value: suppliers.find(s => s.id === viewPO.supplierId)?.name ?? "—" },
+              { label: "Date Created",  value: viewPO.date },
+              { label: "Received",      value: viewPO.receivedDate || viewPO.date },
+              { label: "Total",         value: fmt(viewPO.total) },
             ].map(({ label, value }) => (
               <div key={label}>
                 <div style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)", marginTop: 2 }}>{value}</div>
               </div>
             ))}
-            <div>
-              <div style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Status</div>
-              <div style={{ marginTop: 4 }}>
-                <Badge color={statusColor[viewPO.status]}>
-                  {viewPO.status.charAt(0).toUpperCase() + viewPO.status.slice(1)}
-                </Badge>
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "var(--color-text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--color-indigo)", marginTop: 2 }}>{fmt(viewPO.total)}</div>
-            </div>
           </div>
 
           {/* Items table */}
@@ -622,7 +597,7 @@ export default function PurchasingManagement({
             background: "#f0fdf4", border: "1px solid #bbf7d0",
             borderRadius: "var(--radius-md)", padding: "10px 14px", fontSize: 13, color: "#15803d", fontWeight: 600,
           }}>
-            ✅ Purchase will be marked as <strong>Received</strong> today ({new Date().toISOString().slice(0, 10)})
+            ✅ Stock will be updated immediately upon submission
           </div>
         </div>
 
@@ -831,7 +806,7 @@ export default function PurchasingManagement({
         <div className="modal__footer">
           <Btn variant="secondary" onClick={() => setModal(null)}>Cancel</Btn>
           <Btn onClick={savePO} disabled={saving}>
-            {saving ? "Saving…" : modal === "repurchase" ? "Submit Re-Purchase" : "✅ Submit & Receive"}
+            {saving ? "Saving…" : modal === "repurchase" ? "🔄 Submit Re-Purchase" : "✅ Submit & Add to Stock"}
           </Btn>
         </div>
       </Modal>
