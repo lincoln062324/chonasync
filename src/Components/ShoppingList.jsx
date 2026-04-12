@@ -11,7 +11,7 @@ function uid() {
   return "sl" + Date.now() + Math.random().toString(36).slice(2, 7);
 }
 
-// ─── Searchable product autocomplete (same pattern as PurchasingManagement) ──
+// ─── Searchable product autocomplete ─────────────────────────────────────────
 function ProductSearchInput({ products, value, onChange, placeholder = "Search or type a product name…" }) {
   const [query,   setQuery]   = useState("");
   const [open,    setOpen]    = useState(false);
@@ -102,7 +102,9 @@ function ProductSearchInput({ products, value, onChange, placeholder = "Search o
           {suggestions.length === 0 ? (
             <div style={{ padding: "12px 14px", fontSize: 13, color: "#94a3b8" }}>No match for "{query}"</div>
           ) : suggestions.map(p => {
-            const meta = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
+            const meta       = CATEGORY_META[p.category] ?? CATEGORY_META["Other"];
+            const stockColor = p.stock === 0 ? "#dc2626" : p.stock <= p.reorderLevel ? "#92400e" : "#15803d";
+            const stockBg    = p.stock === 0 ? "#fee2e2" : p.stock <= p.reorderLevel ? "#fef9c3" : "#dcfce7";
             return (
               <div key={p.id} onMouseDown={() => pick(p)}
                 style={{ padding: "9px 12px", cursor: "pointer", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}
@@ -111,11 +113,16 @@ function ProductSearchInput({ products, value, onChange, placeholder = "Search o
               >
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{meta.emoji}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{highlight(p.name)}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{p.sku} · {p.category}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {highlight(p.name)}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
+                    {p.sku} · {p.category} · <span style={{ color: "#64748b" }}>{p.unit}</span>
+                  </div>
                 </div>
-                <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: p.stock === 0 ? "#fee2e2" : p.stock <= p.reorderLevel ? "#fef9c3" : "#dcfce7", color: p.stock === 0 ? "#dc2626" : p.stock <= p.reorderLevel ? "#92400e" : "#15803d" }}>
-                  {p.stock} {p.unit}s
+                {/* Stock + unit pill */}
+                <span style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: stockBg, color: stockColor }}>
+                  {p.stock === 0 ? "Out" : p.stock <= p.reorderLevel ? "⚠ " + p.stock : p.stock} {p.unit}s
                 </span>
               </div>
             );
@@ -126,24 +133,35 @@ function ProductSearchInput({ products, value, onChange, placeholder = "Search o
   );
 }
 
-// ─── Status config ────────────────────────────────────────────────────────────
-const STATUS_META = {
-  available: { label: "Available",  color: "green",  bg: "#dcfce7", border: "#86efac", text: "#15803d", emoji: "✅" },
-  pending:   { label: "Pending",    color: "yellow", bg: "#fef9c3", border: "#fde047", text: "#92400e", emoji: "⏳" },
-};
+// ─── Stock level pill ─────────────────────────────────────────────────────────
+function StockPill({ prod }) {
+  if (!prod) return null;
+  const isOut = prod.stock === 0;
+  const isLow = !isOut && prod.stock <= prod.reorderLevel;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 3,
+      fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
+      background: isOut ? "#fee2e2" : isLow ? "#fef9c3" : "#dcfce7",
+      color:      isOut ? "#dc2626" : isLow ? "#92400e" : "#15803d",
+      border:     `1px solid ${isOut ? "#fca5a5" : isLow ? "#fde047" : "#86efac"}`,
+    }}>
+      {isOut ? "🔴 Out of stock" : isLow ? `⚠️ Low: ${prod.stock} ${prod.unit}s` : `${prod.stock} ${prod.unit}s`}
+    </span>
+  );
+}
 
 // ─── Blank list item ──────────────────────────────────────────────────────────
 function blankItem(supplierId = "") {
   return {
     id:         uid(),
-    productId:  "",      // linked existing product (optional)
-    name:       "",      // free-text name (if not linked)
+    productId:  "",
+    name:       "",
     qty:        1,
     unit:       "piece",
     supplierId,
-    status:     "pending",
+    purchased:  false,   // true = purchased / ready to order
     note:       "",
-    checked:    false,   // checked = user confirmed it's available to purchase
   };
 }
 
@@ -151,29 +169,45 @@ function blankItem(supplierId = "") {
 export default function ShoppingList({
   products,
   suppliers,
+  purchaseOrders = [],
   setActiveModule,
-  onSendToPurchasing,   // (items, supplierId) → void — navigates to Purchasing with prefill
+  onSendToPurchasing,
 }) {
-  // Persist lists in localStorage so they survive page reloads
   const [lists, setLists] = useState(() => {
     try {
       const saved = localStorage.getItem("chona_shopping_lists");
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      // Migrate old items (status + checked) → purchased boolean
+      const parsed = JSON.parse(saved);
+      return parsed.map(l => ({
+        ...l,
+        items: l.items.map(it => ({
+          ...it,
+          purchased: it.purchased !== undefined
+            ? it.purchased
+            : (it.status === "available" && it.checked === true),
+        })),
+      }));
     } catch { return []; }
   });
 
-  const [activeList,   setActiveList]   = useState(null);  // currently open list id
-  const [modal,        setModal]        = useState(null);  // "newList" | "editList" | "addItem" | "editItem" | "send"
+  const [activeList,   setActiveList]   = useState(null);
+  const [modal,        setModal]        = useState(null); // "newList"|"editList"|"addItem"|"send"
   const [listForm,     setListForm]     = useState({ name: "", supplierId: "" });
   const [itemForm,     setItemForm]     = useState(blankItem());
   const [editItemId,   setEditItemId]   = useState(null);
   const [sendPreview,  setSendPreview]  = useState([]);
-  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "available" | "pending"
+  const [filter,       setFilter]       = useState("all"); // "all"|"purchased"|"pending"
+  const [showLowStock, setShowLowStock] = useState(true);
 
-  // Persist on every change
   useEffect(() => {
     localStorage.setItem("chona_shopping_lists", JSON.stringify(lists));
   }, [lists]);
+
+  // ── Low-stock / out-of-stock products ─────────────────────────────────────
+  const lowStockProducts = products
+    .filter(p => p.stock === 0 || p.stock <= p.reorderLevel)
+    .sort((a, b) => a.stock - b.stock);
 
   // ── List CRUD ──────────────────────────────────────────────────────────────
   const createList = () => {
@@ -209,12 +243,21 @@ export default function ShoppingList({
     if (!itemForm.name.trim() && !itemForm.productId) {
       alert("Please enter a product name or select an existing product."); return;
     }
+    // Auto-set purchased=true if this product has been ordered before (has PO history)
+    const hasPurchaseHistory = itemForm.productId
+      ? purchaseOrders.some(po => po.items?.some(i => i.productId === itemForm.productId))
+      : false;
+
     setLists(prev => prev.map(l => {
       if (l.id !== activeList) return l;
+      const finalItem = {
+        ...itemForm,
+        purchased: editItemId ? itemForm.purchased : hasPurchaseHistory,
+      };
       if (editItemId) {
-        return { ...l, items: l.items.map(it => it.id === editItemId ? { ...itemForm, id: editItemId } : it) };
+        return { ...l, items: l.items.map(it => it.id === editItemId ? { ...finalItem, id: editItemId } : it) };
       }
-      return { ...l, items: [...l.items, { ...itemForm, id: uid() }] };
+      return { ...l, items: [...l.items, { ...finalItem, id: uid() }] };
     }));
     setModal(null);
     setEditItemId(null);
@@ -227,45 +270,56 @@ export default function ShoppingList({
     ));
   };
 
-  const toggleCheck = (listId, itemId) => {
+  const togglePurchased = (listId, itemId) => {
     setLists(prev => prev.map(l => l.id === listId
-      ? { ...l, items: l.items.map(it => it.id === itemId ? { ...it, checked: !it.checked } : it) }
+      ? { ...l, items: l.items.map(it => it.id === itemId ? { ...it, purchased: !it.purchased } : it) }
       : l
     ));
   };
 
-  const setItemStatus = (listId, itemId, status) => {
-    setLists(prev => prev.map(l => l.id === listId
-      ? { ...l, items: l.items.map(it => it.id === itemId ? { ...it, status } : it) }
-      : l
-    ));
-  };
-
-  // ── Select / deselect all visible available items ─────────────────────────
   const toggleSelectAll = () => {
     if (!currentList) return;
-    // Only available items in the current filter view can be selected
-    const visibleAvailIds = currentList.items
-      .filter(it => it.status === "available" && (statusFilter === "all" || statusFilter === "available"))
-      .map(it => it.id);
-    const allChecked = visibleAvailIds.every(id =>
-      currentList.items.find(it => it.id === id)?.checked
-    );
+    const visibleIds    = filteredItems.map(it => it.id);
+    const allPurchased  = visibleIds.every(id => currentList.items.find(it => it.id === id)?.purchased);
     setLists(prev => prev.map(l => l.id === activeList
-      ? { ...l, items: l.items.map(it =>
-          visibleAvailIds.includes(it.id) ? { ...it, checked: !allChecked } : it
-        )}
+      ? { ...l, items: l.items.map(it => visibleIds.includes(it.id) ? { ...it, purchased: !allPurchased } : it) }
       : l
     ));
   };
 
-  // ── Send checked Available items to Purchasing ─────────────────────────────
+  // Quick-add a low-stock product to the current list
+  const quickAddLowStock = (prod) => {
+    if (!activeList) { alert("Please select or create a list first."); return; }
+    const list = lists.find(l => l.id === activeList);
+    if (list?.items.some(it => it.productId === prod.id)) {
+      alert(`"${prod.name}" is already in this list.`); return;
+    }
+    const hasPurchaseHistory = purchaseOrders.some(po =>
+      po.items?.some(i => i.productId === prod.id)
+    );
+    const suggestQty = Math.max(1, (prod.reorderLevel ?? 0) - prod.stock + 1);
+    setLists(prev => prev.map(l => l.id === activeList
+      ? { ...l, items: [...l.items, {
+          id:         uid(),
+          productId:  prod.id,
+          name:       prod.name,
+          qty:        suggestQty,
+          unit:       prod.unit,
+          supplierId: prod.supplierId || list?.supplierId || "",
+          purchased:  hasPurchaseHistory,
+          note:       "",
+        }]}
+      : l
+    ));
+  };
+
+  // ── Send checked items to Purchasing ──────────────────────────────────────
   const openSend = () => {
-    const list    = lists.find(l => l.id === activeList);
+    const list = lists.find(l => l.id === activeList);
     if (!list) return;
-    const checked = list.items.filter(it => it.checked && it.status === "available");
+    const checked = list.items.filter(it => it.purchased);
     if (checked.length === 0) {
-      alert("No items are checked as Available. Check at least one available item to send to Purchasing.");
+      alert("No items are checked. Tick at least one item to send to Purchasing.");
       return;
     }
     setSendPreview(checked);
@@ -273,60 +327,59 @@ export default function ShoppingList({
   };
 
   const confirmSend = () => {
-    const list    = lists.find(l => l.id === activeList);
+    const list = lists.find(l => l.id === activeList);
     if (!list) return;
-    // Build PO items: link to existing product if productId set, else use name
     const poItems = sendPreview.map(it => ({
-      isNew:      !it.productId,
-      productId:  it.productId || "",
-      name:       it.name || (products.find(p => p.id === it.productId)?.name ?? ""),
-      qty:        +it.qty || 1,
-      unitCost:   0,
-      supplierId: it.supplierId || list.supplierId,
-      // new product fields (if no productId)
-      newName:    it.name,
-      newCategory:"Other",
-      newCost:    "",
-      newPrice:   "",
-      newStock:   0,
-      newUnit:    it.unit || "piece",
+      isNew:       !it.productId,
+      productId:   it.productId || "",
+      name:        it.name || (products.find(p => p.id === it.productId)?.name ?? ""),
+      qty:         +it.qty || 1,
+      unitCost:    0,
+      supplierId:  it.supplierId || list.supplierId,
+      newName:     it.name,
+      newCategory: "Other",
+      newCost:     "",
+      newPrice:    "",
+      newStock:    0,
+      newUnit:     it.unit || "piece",
     }));
-
-    // Remove only checked+available items from the list; pending stay
+    // Remove sent items; keep unchecked ones
     setLists(prev => prev.map(l => l.id === activeList
-      ? { ...l, items: l.items.filter(it => !(it.checked && it.status === "available")) }
+      ? { ...l, items: l.items.filter(it => !it.purchased) }
       : l
     ));
-
     setModal(null);
     if (onSendToPurchasing) onSendToPurchasing(poItems, list.supplierId);
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const currentList    = lists.find(l => l.id === activeList) ?? null;
-  const checkedCount   = currentList?.items.filter(it => it.checked && it.status === "available").length ?? 0;
-  const pendingCount   = currentList?.items.filter(it => it.status === "pending").length ?? 0;
-  const availableCount = currentList?.items.filter(it => it.status === "available").length ?? 0;
+  const purchasedCount = currentList?.items.filter(it => it.purchased).length  ?? 0;
+  const pendingCount   = currentList?.items.filter(it => !it.purchased).length ?? 0;
 
-  // Items that can be batch-selected (available + within current filter view)
-  const selectableIds = currentList?.items
-    .filter(it => it.status === "available" && (statusFilter === "all" || statusFilter === "available"))
-    .map(it => it.id) ?? [];
-  const allSelectableChecked = selectableIds.length > 0 &&
-    selectableIds.every(id => currentList.items.find(it => it.id === id)?.checked);
+  const filteredItems = currentList
+    ? currentList.items.filter(it =>
+        filter === "all"       ? true
+      : filter === "purchased" ? it.purchased
+      :                          !it.purchased
+      )
+    : [];
+
+  const allFilteredPurchased = filteredItems.length > 0 &&
+    filteredItems.every(it => it.purchased);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", gap: 0, height: "100%", minHeight: 0 }}>
 
-      {/* ══ Left panel: list of shopping lists ══ */}
+      {/* ══ Left panel: list sidebar ══ */}
       <div style={{
         width: 260, flexShrink: 0, borderRight: "1px solid var(--color-border)",
         display: "flex", flexDirection: "column", background: "var(--color-surface)",
       }}>
         <div style={{ padding: "16px 14px 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            📋 Buy Lists
+            📋 Check Lists
           </div>
           <Btn size="sm" onClick={() => { setListForm({ name: "", supplierId: suppliers[0]?.id || "" }); setModal("newList"); }} icon="plus">
             New
@@ -340,14 +393,14 @@ export default function ShoppingList({
             </div>
           )}
           {lists.map(l => {
-            const sup        = suppliers.find(s => s.id === l.supplierId);
-            const avail      = l.items.filter(it => it.status === "available").length;
-            const pend       = l.items.filter(it => it.status === "pending").length;
-            const isActive   = l.id === activeList;
+            const sup      = suppliers.find(s => s.id === l.supplierId);
+            const done     = l.items.filter(it => it.purchased).length;
+            const pending  = l.items.filter(it => !it.purchased).length;
+            const isActive = l.id === activeList;
             return (
               <div
                 key={l.id}
-                onClick={() => { setActiveList(l.id); setStatusFilter("all"); }}
+                onClick={() => { setActiveList(l.id); setFilter("all"); }}
                 style={{
                   padding: "10px 12px", borderRadius: 10, marginBottom: 4, cursor: "pointer",
                   background: isActive ? "#eef2ff" : "transparent",
@@ -367,8 +420,8 @@ export default function ShoppingList({
                 </div>
                 {sup && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>🏪 {sup.name}</div>}
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {avail > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 99, background: "#dcfce7", color: "#15803d" }}>✅ {avail} available</span>}
-                  {pend  > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 99, background: "#fef9c3", color: "#92400e" }}>⏳ {pend} pending</span>}
+                  {done    > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 99, background: "#dcfce7", color: "#15803d" }}>✅ {done} purchased</span>}
+                  {pending > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 99, background: "#fef9c3", color: "#92400e" }}>⏳ {pending} pending</span>}
                   {l.items.length === 0 && <span style={{ fontSize: 11, color: "#cbd5e1" }}>Empty</span>}
                 </div>
                 <div style={{ fontSize: 10, color: "#cbd5e1", marginTop: 4 }}>{l.createdAt}</div>
@@ -376,9 +429,73 @@ export default function ShoppingList({
             );
           })}
         </div>
+
+        {/* ── Low Stock Suggestions Panel ── */}
+        {lowStockProducts.length > 0 && (
+          <div style={{ borderTop: "1px solid var(--color-border)", background: "#fffbeb" }}>
+            <button
+              onClick={() => setShowLowStock(v => !v)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "9px 14px", border: "none", background: "transparent",
+                cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#92400e",
+              }}
+            >
+              <span>⚠️ Low Stock ({lowStockProducts.length})</span>
+              <span style={{ fontSize: 10, color: "#b45309" }}>{showLowStock ? "▲" : "▼"}</span>
+            </button>
+            {showLowStock && (
+              <div style={{ maxHeight: 200, overflowY: "auto", padding: "0 8px 10px" }}>
+                <div style={{ fontSize: 10, color: "#b45309", padding: "0 6px 6px", fontWeight: 600 }}>
+                  Tap + to add to active list
+                </div>
+                {lowStockProducts.map(prod => {
+                  const meta   = CATEGORY_META[prod.category] ?? CATEGORY_META["Other"];
+                  const inList = currentList?.items.some(it => it.productId === prod.id);
+                  return (
+                    <div key={prod.id} style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "6px 8px", borderRadius: 8, marginBottom: 3,
+                      background: inList ? "#f0fdf4" : "#fff",
+                      border: `1px solid ${inList ? "#86efac" : "#fde68a"}`,
+                    }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>{meta.emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {prod.name}
+                        </div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: prod.stock === 0 ? "#dc2626" : "#92400e" }}>
+                          {prod.stock === 0 ? "Out of stock" : `${prod.stock} ${prod.unit}s left`}
+                        </div>
+                      </div>
+                      {inList ? (
+                        <span style={{ fontSize: 10, color: "#15803d", fontWeight: 700, flexShrink: 0 }}>✓ In list</span>
+                      ) : (
+                        <button
+                          onClick={() => quickAddLowStock(prod)}
+                          disabled={!activeList}
+                          title={activeList ? `Add "${prod.name}" to current list` : "Select a list first"}
+                          style={{
+                            flexShrink: 0, width: 22, height: 22, borderRadius: "50%",
+                            border: "none",
+                            background: activeList ? "#f59e0b" : "#e2e8f0",
+                            color: activeList ? "#fff" : "#94a3b8",
+                            cursor: activeList ? "pointer" : "not-allowed",
+                            fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center",
+                            fontWeight: 900, lineHeight: 1,
+                          }}
+                        >+</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ══ Right panel: selected list items ══ */}
+      {/* ══ Right panel: list detail ══ */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
 
         {!currentList ? (
@@ -398,7 +515,7 @@ export default function ShoppingList({
                 <h1 className="page-header__title" style={{ fontSize: 18 }}>{currentList.name}</h1>
                 <p className="page-header__sub">
                   {currentList.items.length} item{currentList.items.length !== 1 ? "s" : ""} ·{" "}
-                  <span style={{ color: "#15803d" }}>✅ {availableCount} available</span> ·{" "}
+                  <span style={{ color: "#15803d" }}>✅ {purchasedCount} purchased</span> ·{" "}
                   <span style={{ color: "#92400e" }}>⏳ {pendingCount} pending</span>
                   {suppliers.find(s => s.id === currentList.supplierId) && (
                     <> · 🏪 {suppliers.find(s => s.id === currentList.supplierId)?.name}</>
@@ -415,9 +532,9 @@ export default function ShoppingList({
                 <Btn size="sm" onClick={() => { setItemForm(blankItem(currentList.supplierId)); setEditItemId(null); setModal("addItem"); }} icon="plus">
                   Add Item
                 </Btn>
-                {checkedCount > 0 && (
+                {purchasedCount > 0 && (
                   <Btn size="sm" variant="success" onClick={openSend}>
-                    🛍️ Send {checkedCount} to Purchasing
+                    🛍️ Send {purchasedCount} to Purchasing
                   </Btn>
                 )}
               </div>
@@ -425,42 +542,34 @@ export default function ShoppingList({
 
             {/* Legend */}
             <div style={{ padding: "8px 20px", background: "#f8fafc", borderBottom: "1px solid var(--color-border)", display: "flex", gap: 16, fontSize: 12, color: "#64748b", flexWrap: "wrap" }}>
-              <span>☑️ Check items that are <strong>available</strong> to purchase now</span>
-              <span>· Pending items stay for next time</span>
-              <span>· Only checked Available items go to Purchasing</span>
+              <span>☑️ <strong>Check</strong> items that are purchased or ready to order</span>
+              <span>· Unchecked items stay for next session</span>
+              <span>· Only checked items go to Purchasing</span>
             </div>
 
-            {/* ── Filter bar ── */}
+            {/* Filter bar */}
             <div style={{
               padding: "10px 20px", borderBottom: "1px solid var(--color-border)",
-              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-              background: "#fff",
+              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#fff",
             }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginRight: 4 }}>Show:</span>
               {[
-                { key: "all",       label: "All Items",       emoji: "📋", activeBg: "#eef2ff", activeBorder: "#c7d2fe", activeText: "#4338ca" },
-                { key: "available", label: "Available Only",  emoji: "✅", activeBg: "#dcfce7", activeBorder: "#86efac", activeText: "#15803d" },
-                { key: "pending",   label: "Pending Only",    emoji: "⏳", activeBg: "#fef9c3", activeBorder: "#fde047", activeText: "#92400e" },
+                { key: "all",       label: "All Items",         emoji: "📋", activeBg: "#eef2ff", activeBorder: "#c7d2fe", activeText: "#4338ca" },
+                { key: "purchased", label: "Purchased / Ready", emoji: "✅", activeBg: "#dcfce7", activeBorder: "#86efac", activeText: "#15803d" },
+                { key: "pending",   label: "Still Needed",      emoji: "⏳", activeBg: "#fef9c3", activeBorder: "#fde047", activeText: "#92400e" },
               ].map(({ key, label, emoji, activeBg, activeBorder, activeText }) => {
-                const isActive = statusFilter === key;
-                // compute counts for badges
-                const count = key === "all"
-                  ? currentList.items.length
-                  : currentList.items.filter(it => it.status === key).length;
+                const isActive = filter === key;
+                const count = key === "all" ? currentList.items.length : key === "purchased" ? purchasedCount : pendingCount;
                 return (
-                  <button
-                    key={key}
-                    onClick={() => setStatusFilter(key)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 5,
-                      padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700,
-                      cursor: "pointer", transition: "all .15s",
-                      border: `1.5px solid ${isActive ? activeBorder : "var(--color-border,#e2e8f0)"}`,
-                      background: isActive ? activeBg : "#f8fafc",
-                      color: isActive ? activeText : "#64748b",
-                      boxShadow: isActive ? "0 1px 4px rgba(0,0,0,.08)" : "none",
-                    }}
-                  >
+                  <button key={key} onClick={() => setFilter(key)} style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 700,
+                    cursor: "pointer", transition: "all .15s",
+                    border: `1.5px solid ${isActive ? activeBorder : "var(--color-border,#e2e8f0)"}`,
+                    background: isActive ? activeBg : "#f8fafc",
+                    color: isActive ? activeText : "#64748b",
+                    boxShadow: isActive ? "0 1px 4px rgba(0,0,0,.08)" : "none",
+                  }}>
                     <span>{emoji}</span>
                     <span>{label}</span>
                     <span style={{
@@ -473,106 +582,98 @@ export default function ShoppingList({
                 );
               })}
 
-              {/* Select All / Deselect All — only shown when there are selectable available items */}
-              {selectableIds.length > 0 && (
+              {/* Select All / Deselect All */}
+              {filteredItems.length > 0 && (
                 <button
                   onClick={toggleSelectAll}
                   style={{
                     marginLeft: "auto", display: "flex", alignItems: "center", gap: 5,
                     padding: "5px 13px", borderRadius: 99, fontSize: 12, fontWeight: 700,
                     cursor: "pointer", transition: "all .15s",
-                    border: `1.5px solid ${allSelectableChecked ? "#fca5a5" : "#a5b4fc"}`,
-                    background: allSelectableChecked ? "#fef2f2" : "#eef2ff",
-                    color: allSelectableChecked ? "#dc2626" : "#4338ca",
+                    border: `1.5px solid ${allFilteredPurchased ? "#fca5a5" : "#a5b4fc"}`,
+                    background: allFilteredPurchased ? "#fef2f2" : "#eef2ff",
+                    color: allFilteredPurchased ? "#dc2626" : "#4338ca",
                   }}
-                  title={allSelectableChecked ? "Deselect all available items" : "Select all available items"}
                 >
-                  <span>{allSelectableChecked ? "☐" : "☑"}</span>
-                  <span>{allSelectableChecked ? "Deselect All" : "Select All"}</span>
+                  <span>{allFilteredPurchased ? "☐" : "☑"}</span>
+                  <span>{allFilteredPurchased ? "Uncheck All" : "Check All"}</span>
                   <span style={{
                     fontSize: 10, fontWeight: 800, padding: "1px 5px", borderRadius: 99,
-                    background: allSelectableChecked ? "rgba(220,38,38,.12)" : "rgba(99,102,241,.12)",
-                    color: allSelectableChecked ? "#dc2626" : "#4338ca",
-                  }}>{selectableIds.length}</span>
+                    background: allFilteredPurchased ? "rgba(220,38,38,.12)" : "rgba(99,102,241,.12)",
+                    color: allFilteredPurchased ? "#dc2626" : "#4338ca",
+                  }}>{filteredItems.length}</span>
                 </button>
               )}
             </div>
 
-            {/* Items list */}
+            {/* Items */}
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px" }}>
-              {(() => {
-                const filteredItems = currentList.items.filter(it =>
-                  statusFilter === "all" ? true : it.status === statusFilter
-                );
-                const allEmpty = currentList.items.length === 0;
-                const filterEmpty = !allEmpty && filteredItems.length === 0;
-                return allEmpty ? (
-                  <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>📝</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>No items yet</div>
-                    <div style={{ fontSize: 13, marginBottom: 16 }}>Add products you plan to purchase.</div>
-                    <Btn onClick={() => { setItemForm(blankItem(currentList.supplierId)); setEditItemId(null); setModal("addItem"); }} icon="plus">
-                      Add First Item
-                    </Btn>
+              {currentList.items.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>📝</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>No items yet</div>
+                  <div style={{ fontSize: 13, marginBottom: 16 }}>Add products you plan to purchase.</div>
+                  <Btn onClick={() => { setItemForm(blankItem(currentList.supplierId)); setEditItemId(null); setModal("addItem"); }} icon="plus">
+                    Add First Item
+                  </Btn>
+                </div>
+              ) : filteredItems.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>{filter === "purchased" ? "✅" : "⏳"}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                    No {filter === "purchased" ? "purchased" : "pending"} items
                   </div>
-                ) : filterEmpty ? (
-                  <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>
-                      {statusFilter === "available" ? "✅" : "⏳"}
-                    </div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>
-                      No {statusFilter === "available" ? "available" : "pending"} items
-                    </div>
-                    <div style={{ fontSize: 13, marginBottom: 16 }}>
-                      {statusFilter === "available"
-                        ? "Mark items as Available to see them here."
-                        : "All items are marked as Available — great!"}
-                    </div>
-                    <button
-                      onClick={() => setStatusFilter("all")}
-                      style={{
-                        fontSize: 12, fontWeight: 700, padding: "6px 16px", borderRadius: 8,
-                        border: "1.5px solid #c7d2fe", background: "#eef2ff", color: "#4338ca",
-                        cursor: "pointer",
-                      }}
-                    >Show All Items</button>
+                  <div style={{ fontSize: 13, marginBottom: 16 }}>
+                    {filter === "purchased"
+                      ? "Check items to mark them as purchased / ready."
+                      : "All items are checked — ready to send to Purchasing!"}
                   </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {/* Sort: available first, then pending */}
+                  <button
+                    onClick={() => setFilter("all")}
+                    style={{ fontSize: 12, fontWeight: 700, padding: "6px 16px", borderRadius: 8, border: "1.5px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", cursor: "pointer" }}
+                  >Show All Items</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {/* Unchecked (pending) first, checked (purchased) last */}
                   {[...filteredItems]
-                    .sort((a, b) => {
-                      if (a.status === b.status) return 0;
-                      return a.status === "available" ? -1 : 1;
-                    })
+                    .sort((a, b) => Number(a.purchased) - Number(b.purchased))
                     .map(item => {
-                      const prod   = products.find(p => p.id === item.productId);
-                      const sup    = suppliers.find(s => s.id === item.supplierId);
-                      const meta   = prod ? (CATEGORY_META[prod.category] ?? CATEGORY_META["Other"]) : CATEGORY_META["Other"];
-                      const sMeta  = STATUS_META[item.status];
-                      const isAvail = item.status === "available";
+                      const prod       = products.find(p => p.id === item.productId);
+                      const sup        = suppliers.find(s => s.id === item.supplierId);
+                      const meta       = prod ? (CATEGORY_META[prod.category] ?? CATEGORY_META["Other"]) : CATEGORY_META["Other"];
+                      const isOut      = prod && prod.stock === 0;
+                      const isLow      = prod && !isOut && prod.stock <= prod.reorderLevel;
 
                       return (
-                        <div
-                          key={item.id}
-                          style={{
-                            display: "flex", alignItems: "flex-start", gap: 12,
-                            padding: "12px 14px", borderRadius: 10,
-                            background: item.checked ? "#f0fdf4" : "var(--color-surface)",
-                            border: `1.5px solid ${item.checked ? "#86efac" : "var(--color-border)"}`,
-                            opacity: item.status === "pending" ? 0.85 : 1,
-                            transition: "all .15s",
-                          }}
-                        >
-                          {/* Checkbox — only enabled for available items */}
-                          <div style={{ paddingTop: 2, flexShrink: 0 }}>
+                        <div key={item.id} style={{
+                          display: "flex", alignItems: "flex-start", gap: 12,
+                          padding: "12px 14px", borderRadius: 10,
+                          background: item.purchased
+                            ? "#f0fdf4"
+                            : isOut ? "#fff5f5"
+                            : isLow ? "#fffbeb"
+                            : "var(--color-surface)",
+                          border: `1.5px solid ${
+                            item.purchased ? "#86efac"
+                            : isOut ? "#fca5a5"
+                            : isLow ? "#fde68a"
+                            : "var(--color-border)"
+                          }`,
+                          opacity: item.purchased ? 0.72 : 1,
+                          transition: "all .15s",
+                        }}>
+
+                          {/* ── Checkbox only — replaces the old Available/Pending button ── */}
+                          <div style={{ paddingTop: 3, flexShrink: 0 }}>
                             <input
                               type="checkbox"
-                              checked={item.checked}
-                              disabled={!isAvail}
-                              onChange={() => isAvail && toggleCheck(currentList.id, item.id)}
-                              title={isAvail ? "Check to include in purchase" : "Mark as Available first"}
-                              style={{ width: 17, height: 17, cursor: isAvail ? "pointer" : "not-allowed", accentColor: "#22c55e" }}
+                              checked={!!item.purchased}
+                              onChange={() => togglePurchased(currentList.id, item.id)}
+                              title={item.purchased
+                                ? "Uncheck — still needed"
+                                : "Check — purchased / ready to order"}
+                              style={{ width: 17, height: 17, cursor: "pointer", accentColor: "#22c55e" }}
                             />
                           </div>
 
@@ -584,52 +685,48 @@ export default function ShoppingList({
                             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                               <span style={{
                                 fontSize: 14, fontWeight: 700,
-                                color: item.checked ? "#15803d" : "var(--color-text-primary)",
-                                textDecoration: item.checked ? "none" : "none",
+                                color: item.purchased ? "#15803d" : "var(--color-text-primary)",
+                                textDecoration: item.purchased ? "line-through" : "none",
                               }}>
                                 {prod ? prod.name : item.name || "—"}
                               </span>
                               {prod && <span style={{ fontSize: 11, color: "#94a3b8" }}>{prod.sku}</span>}
-                              {/* Status badge */}
-                              <span style={{
-                                fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
-                                background: sMeta.bg, color: sMeta.text, border: `1px solid ${sMeta.border}`,
-                              }}>
-                                {sMeta.emoji} {sMeta.label}
-                              </span>
+                              {/* Stock pill — always shown for linked products */}
+                              {prod && <StockPill prod={prod} />}
                             </div>
 
-                            <div style={{ display: "flex", gap: 12, marginTop: 4, fontSize: 12, color: "#64748b", flexWrap: "wrap" }}>
-                              <span>Qty: <strong>{item.qty} {item.unit}s</strong></span>
-                              {sup && <span>🏪 {sup.name}</span>}
-                              {item.note && <span style={{ fontStyle: "italic" }}>"{item.note}"</span>}
+                            {/* Details row */}
+                            <div style={{ display: "flex", gap: 12, marginTop: 5, fontSize: 12, color: "#64748b", flexWrap: "wrap", alignItems: "center" }}>
+                              <span>Qty: <strong>{item.qty} {item.unit}{item.qty !== 1 ? "s" : ""}</strong></span>
                               {prod && (
-                                <span>
-                                  Current stock:{" "}
-                                  <strong style={{ color: prod.stock === 0 ? "#dc2626" : prod.stock <= prod.reorderLevel ? "#92400e" : "#15803d" }}>
-                                    {prod.stock}
+                                <span>Unit: <strong>{prod.unit}</strong></span>
+                              )}
+                              {/* Current stock — always visible for linked products */}
+                              {prod && (
+                                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                  Stock:{" "}
+                                  <strong style={{ color: isOut ? "#dc2626" : isLow ? "#92400e" : "#15803d" }}>
+                                    {prod.stock} {prod.unit}s
                                   </strong>
+                                  {isOut && (
+                                    <span style={{ fontSize: 10, background: "#fee2e2", color: "#dc2626", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>
+                                      OUT
+                                    </span>
+                                  )}
+                                  {isLow && (
+                                    <span style={{ fontSize: 10, background: "#fef9c3", color: "#92400e", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>
+                                      LOW
+                                    </span>
+                                  )}
                                 </span>
                               )}
+                              {sup && <span>🏪 {sup.name}</span>}
+                              {item.note && <span style={{ fontStyle: "italic" }}>"{item.note}"</span>}
                             </div>
                           </div>
 
                           {/* Actions */}
                           <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                            {/* Toggle status */}
-                            <button
-                              onClick={() => setItemStatus(currentList.id, item.id, isAvail ? "pending" : "available")}
-                              title={isAvail ? "Mark as Pending" : "Mark as Available"}
-                              style={{
-                                fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6,
-                                border: `1px solid ${isAvail ? "#fde047" : "#86efac"}`,
-                                background: isAvail ? "#fef9c3" : "#dcfce7",
-                                color: isAvail ? "#92400e" : "#15803d",
-                                cursor: "pointer",
-                              }}
-                            >
-                              {isAvail ? "⏳ Pending" : "✅ Available"}
-                            </button>
                             <Btn size="sm" variant="secondary" onClick={() => {
                               setItemForm({ ...item });
                               setEditItemId(item.id);
@@ -644,9 +741,8 @@ export default function ShoppingList({
                         </div>
                       );
                     })}
-                  </div>
-                );
-              })()}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -697,15 +793,42 @@ export default function ShoppingList({
           <ProductSearchInput
             products={products}
             value={itemForm.productId}
-            onChange={(id, name) => setItemForm(f => ({
-              ...f,
-              productId: id,
-              name:      id ? (products.find(p => p.id === id)?.name ?? name) : f.name,
-              unit:      id ? (products.find(p => p.id === id)?.unit ?? f.unit) : f.unit,
-            }))}
+            onChange={(id, name) => {
+              const prod = products.find(p => p.id === id);
+              setItemForm(f => ({
+                ...f,
+                productId: id,
+                name:      id ? (prod?.name ?? name) : f.name,
+                unit:      id ? (prod?.unit ?? f.unit) : f.unit,
+              }));
+            }}
             placeholder="Link to existing product (optional)…"
           />
         </Field>
+
+        {/* Linked product stock preview */}
+        {itemForm.productId && (() => {
+          const prod  = products.find(p => p.id === itemForm.productId);
+          if (!prod) return null;
+          const isOut = prod.stock === 0;
+          const isLow = !isOut && prod.stock <= prod.reorderLevel;
+          return (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 12px", borderRadius: 8, marginBottom: 4,
+              background: isOut ? "#fff5f5" : isLow ? "#fffbeb" : "#f0fdf4",
+              border: `1px solid ${isOut ? "#fca5a5" : isLow ? "#fde68a" : "#86efac"}`,
+              fontSize: 12,
+            }}>
+              <span style={{ fontSize: 18 }}>{(CATEGORY_META[prod.category] ?? CATEGORY_META["Other"]).emoji}</span>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>{prod.name}</span>
+                <span style={{ color: "#64748b" }}> · {prod.unit} · {prod.sku}</span>
+              </div>
+              <StockPill prod={prod} />
+            </div>
+          );
+        })()}
 
         {!itemForm.productId && (
           <Field label="Product Name" required>
@@ -733,21 +856,34 @@ export default function ShoppingList({
           </Field>
         </div>
 
-        <div className="form-grid-2">
-          <Field label="Supplier">
-            <select className="select" value={itemForm.supplierId}
-              onChange={e => setItemForm(f => ({ ...f, supplierId: e.target.value }))}>
-              <option value="">— inherit from list —</option>
-              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </Field>
-          <Field label="Status">
-            <select className="select" value={itemForm.status}
-              onChange={e => setItemForm(f => ({ ...f, status: e.target.value }))}>
-              <option value="pending">⏳ Pending</option>
-              <option value="available">✅ Available</option>
-            </select>
-          </Field>
+        <Field label="Supplier">
+          <select className="select" value={itemForm.supplierId}
+            onChange={e => setItemForm(f => ({ ...f, supplierId: e.target.value }))}>
+            <option value="">— inherit from list —</option>
+            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </Field>
+
+        {/* Purchased checkbox */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "10px 12px", borderRadius: 8, marginBottom: 4,
+          background: itemForm.purchased ? "#f0fdf4" : "#f8fafc",
+          border: `1px solid ${itemForm.purchased ? "#86efac" : "#e2e8f0"}`,
+        }}>
+          <input
+            type="checkbox"
+            id="item-purchased"
+            checked={!!itemForm.purchased}
+            onChange={e => setItemForm(f => ({ ...f, purchased: e.target.checked }))}
+            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#22c55e" }}
+          />
+          <label htmlFor="item-purchased" style={{
+            fontSize: 13, fontWeight: 600, cursor: "pointer",
+            color: itemForm.purchased ? "#15803d" : "var(--color-text-primary)",
+          }}>
+            {itemForm.purchased ? "✅ Purchased / ready to order" : "⏳ Still needed (pending)"}
+          </label>
         </div>
 
         <Field label="Note (optional)">
@@ -773,7 +909,7 @@ export default function ShoppingList({
           background: "#dbeafe", border: "1px solid #93c5fd", borderRadius: 8,
           padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#1d4ed8", fontWeight: 600,
         }}>
-          🛍️ These <strong>{sendPreview.length}</strong> checked Available item{sendPreview.length !== 1 ? "s" : ""} will be sent to Purchasing as a new PO. Pending items stay in the list.
+          🛍️ <strong>{sendPreview.length}</strong> checked item{sendPreview.length !== 1 ? "s" : ""} will be sent to Purchasing as a new PO. Unchecked items stay in the list.
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
@@ -787,22 +923,19 @@ export default function ShoppingList({
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700 }}>{prod ? prod.name : it.name}</div>
                   <div style={{ fontSize: 11, color: "#64748b" }}>
-                    Qty: {it.qty} {it.unit}s
-                    {sup && ` · ${sup.name}`}
-                    {prod && ` · Stock: ${prod.stock}`}
+                    Qty: {it.qty} {it.unit}{it.qty !== 1 ? "s" : ""}
+                    {sup  && ` · ${sup.name}`}
+                    {prod && ` · Stock: ${prod.stock} ${prod.unit}s`}
                   </div>
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "#dcfce7", color: "#15803d" }}>✅ Available</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "#dcfce7", color: "#15803d" }}>✅ Ready</span>
               </div>
             );
           })}
         </div>
 
-        <div style={{
-          background: "#fef9c3", border: "1px solid #fde047", borderRadius: 8,
-          padding: "8px 12px", fontSize: 12, color: "#92400e", marginBottom: 16,
-        }}>
-          ⏳ Pending items will remain in this list for your next purchasing session.
+        <div style={{ background: "#fef9c3", border: "1px solid #fde047", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#92400e", marginBottom: 16 }}>
+          ⏳ Unchecked items will remain in this list for your next purchasing session.
         </div>
 
         <div className="modal__footer">

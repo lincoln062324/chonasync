@@ -243,6 +243,7 @@ export default function App() {
             <ShoppingList
               products={products}
               suppliers={suppliers}
+              purchaseOrders={purchaseOrders}
               setActiveModule={navigate}
               onSendToPurchasing={(items, supplierId) => {
                 setPrefillPOItems({ items, supplierId });

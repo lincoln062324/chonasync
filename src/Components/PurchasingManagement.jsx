@@ -228,7 +228,7 @@ export default function PurchasingManagement({
   prefillItems,        // { items, supplierId } from ShoppingList — auto-opens create modal
   onPrefillConsumed,   // clears prefill after modal opens
 }) {
-  const [modal,     setModal]     = useState(null); // "create" | "view" | "repurchase"
+  const [modal,     setModal]     = useState(null); // "create" | "view"
   const [form,      setForm]      = useState({ supplierId: "" });
   const [poItems,   setPoItems]   = useState([{ isNew: false, productId: "", qty: 1, unitCost: 0 }]);
   const [viewPO,    setViewPO]    = useState(null);
@@ -319,27 +319,6 @@ export default function PurchasingManagement({
     setModal("view");
   };
 
-  const openRepurchase = (po) => {
-    setViewPO(po);
-    setForm({
-      supplierId:   po.supplierId,
-    });
-    // Pre-fill items from the original PO
-    setPoItems(
-      po.items.map(i => {
-        const prod = products.find(p => p.id === i.productId);
-        return {
-          isNew:        false,
-          productId:    i.productId,
-          qty:          i.qty,
-          unitCost:     i.unitCost,
-          currentStock: prod?.stock ?? "",
-        };
-      })
-    );
-    setModal("repurchase");
-  };
-
   // ── Save PO — auto-received on creation, stock updated immediately ────────
   const savePO = async () => {
     setSaving(true);
@@ -362,7 +341,7 @@ export default function PurchasingManagement({
               supplierId:   form.supplierId,
               cost:         +item.newCost  || 0,
               price:        +item.newPrice || 0,
-              stock:        openStock + orderQty,   // opening stock + order qty already baked in
+              stock:        orderQty,   // opening stock + order qty already baked in
               reserved:     0,
               damaged:      0,
               reorderLevel: 10,
@@ -434,7 +413,7 @@ export default function PurchasingManagement({
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-header__title">Purchasing Management</h1>
+          <h1 className="page-header__title">Purchased Management</h1>
           <p className="page-header__sub">Manage purchase orders and incoming stock</p>
         </div>
         <Btn onClick={openCreate} icon="plus">Create PO</Btn>
@@ -445,7 +424,7 @@ export default function PurchasingManagement({
         <table className="data-table">
           <thead>
             <tr>
-              {["PO #", "Date", "Supplier", "Items", "Total", "Received", "Actions"].map(h => (
+              {["PO #", "Date", "Supplier", "Items", "Total", "Received"].map(h => (
                 <th key={h}>{h}</th>
               ))}
             </tr>
@@ -453,13 +432,13 @@ export default function PurchasingManagement({
           <tbody>
             {purchaseOrders.length === 0 && (
               <tr>
-                <td colSpan={7} className="table-empty">No purchase orders yet. Click "Create PO" to start.</td>
+                <td colSpan={6} className="table-empty">No purchase orders yet. Click "Create PO" to start.</td>
               </tr>
             )}
             {purchaseOrders.map(po => {
               const supplier = suppliers.find(s => s.id === po.supplierId);
               return (
-                <tr key={po.id}>
+                <tr key={po.id} onClick={() => openView(po)} style={{ cursor: "pointer" }} title="Click to view details">
                   <td className="td-id">{po.id.toString().toUpperCase()}</td>
                   <td className="td-small">{po.date}</td>
                   <td className="td-name">{supplier?.name || "—"}</td>
@@ -467,16 +446,6 @@ export default function PurchasingManagement({
                   <td className="td-price">{fmt(po.total)}</td>
                   <td className="td-small" style={{ color: "var(--color-green)", fontWeight: 600 }}>
                     ✓ {po.receivedDate || po.date}
-                  </td>
-                  <td>
-                    <div className="btn-row">
-                      <Btn size="sm" variant="secondary" onClick={() => openView(po)} title="View details">
-                        <Icon name="search" size={12} />
-                      </Btn>
-                      <Btn size="sm" variant="secondary" onClick={() => openRepurchase(po)} title="Re-purchase">
-                        <Icon name="refresh" size={12} />
-                      </Btn>
-                    </div>
                   </td>
                 </tr>
               );
@@ -552,10 +521,7 @@ export default function PurchasingManagement({
             </table>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Btn variant="secondary" onClick={() => openRepurchase(viewPO)}>
-              <Icon name="refresh" size={13} /> Re-purchase this PO
-            </Btn>
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
             <Btn onClick={() => setModal(null)}>Close</Btn>
           </div>
         </Modal>
@@ -565,21 +531,11 @@ export default function PurchasingManagement({
           CREATE / RE-PURCHASE PO MODAL
       ═══════════════════════════════════════════════════════ */}
       <Modal
-        open={modal === "create" || modal === "repurchase"}
+        open={modal === "create"}
         onClose={() => setModal(null)}
-        title={modal === "repurchase"
-          ? `Re-Purchase — ${viewPO?.id?.toString().toUpperCase()}`
-          : "Create Purchase Order"}
+        title="Create Purchase Order"
         maxWidth={760}
       >
-        {modal === "repurchase" && (
-          <div style={{
-            background: "#dbeafe", border: "1px solid #93c5fd", borderRadius: "var(--radius-md)",
-            padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#1d4ed8", fontWeight: 600,
-          }}>
-            📋 Pre-filled from original PO. Adjust quantities or costs as needed, then submit.
-          </div>
-        )}
 
         {/* Supplier */}
         <div className="form-grid-2 mb-16">
@@ -806,7 +762,7 @@ export default function PurchasingManagement({
         <div className="modal__footer">
           <Btn variant="secondary" onClick={() => setModal(null)}>Cancel</Btn>
           <Btn onClick={savePO} disabled={saving}>
-            {saving ? "Saving…" : modal === "repurchase" ? "🔄 Submit Re-Purchase" : "✅ Submit & Add to Stock"}
+            {saving ? "Saving…" : "✅ Submit & Add to Stock"}
           </Btn>
         </div>
       </Modal>
