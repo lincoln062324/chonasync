@@ -170,6 +170,7 @@ export default function ShoppingList({
   products,
   suppliers,
   purchaseOrders = [],
+  currentUser,
   setActiveModule,
   onSendToPurchasing,
 }) {
@@ -193,7 +194,7 @@ export default function ShoppingList({
 
   const [activeList,   setActiveList]   = useState(null);
   const [modal,        setModal]        = useState(null); // "newList"|"editList"|"addItem"|"send"
-  const [listForm,     setListForm]     = useState({ name: "", supplierId: "" });
+  const [listForm,     setListForm]     = useState({ supplierId: "" });
   const [itemForm,     setItemForm]     = useState(blankItem());
   const [editItemId,   setEditItemId]   = useState(null);
   const [sendPreview,  setSendPreview]  = useState([]);
@@ -211,13 +212,16 @@ export default function ShoppingList({
 
   // ── List CRUD ──────────────────────────────────────────────────────────────
   const createList = () => {
-    if (!listForm.name.trim()) { alert("Please enter a list name."); return; }
+    if (!listForm.supplierId) { alert("Please select a supplier."); return; }
+    const creatorName = currentUser?.name || currentUser?.email || "User";
+    const today       = new Date().toISOString().slice(0, 10);
     const newList = {
-      id:         uid(),
-      name:       listForm.name.trim(),
-      supplierId: listForm.supplierId,
-      createdAt:  new Date().toISOString().slice(0, 10),
-      items:      [],
+      id:          uid(),
+      name:        creatorName,          // creator's name is the list name
+      supplierId:  listForm.supplierId,
+      createdAt:   today,
+      createdBy:   creatorName,
+      items:       [],
     };
     setLists(prev => [newList, ...prev]);
     setActiveList(newList.id);
@@ -225,8 +229,9 @@ export default function ShoppingList({
   };
 
   const updateList = () => {
+    if (!listForm.supplierId) { alert("Please select a supplier."); return; }
     setLists(prev => prev.map(l => l.id === activeList
-      ? { ...l, name: listForm.name.trim(), supplierId: listForm.supplierId }
+      ? { ...l, supplierId: listForm.supplierId }
       : l
     ));
     setModal(null);
@@ -381,7 +386,7 @@ export default function ShoppingList({
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             📋 Check Lists
           </div>
-          <Btn size="sm" onClick={() => { setListForm({ name: "", supplierId: suppliers[0]?.id || "" }); setModal("newList"); }} icon="plus">
+          <Btn size="sm" onClick={() => { setListForm({ supplierId: suppliers[0]?.id || "" }); setModal("newList"); }} icon="plus">
             New
           </Btn>
         </div>
@@ -411,14 +416,18 @@ export default function ShoppingList({
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 3 }}>{l.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 2 }}>
+                    🏪 {sup?.name || "No Supplier"}
+                  </div>
                   <button
                     onMouseDown={e => { e.stopPropagation(); deleteList(l.id); }}
                     style={{ border: "none", background: "transparent", color: "#cbd5e1", cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "0 0 0 6px" }}
                     title="Delete list"
                   >×</button>
                 </div>
-                {sup && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>🏪 {sup.name}</div>}
+                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>
+                  👤 {l.createdBy || l.name}
+                </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {done    > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 99, background: "#dcfce7", color: "#15803d" }}>✅ {done} purchased</span>}
                   {pending > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 99, background: "#fef9c3", color: "#92400e" }}>⏳ {pending} pending</span>}
@@ -503,7 +512,7 @@ export default function ShoppingList({
             <div style={{ fontSize: 48 }}>🛒</div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Select or create a buy list</div>
             <div style={{ fontSize: 13 }}>Plan your next purchases without committing to a PO yet.</div>
-            <Btn onClick={() => { setListForm({ name: "", supplierId: suppliers[0]?.id || "" }); setModal("newList"); }} icon="plus">
+            <Btn onClick={() => { setListForm({ supplierId: suppliers[0]?.id || "" }); setModal("newList"); }} icon="plus">
               Create First List
             </Btn>
           </div>
@@ -512,19 +521,19 @@ export default function ShoppingList({
             {/* Header */}
             <div className="page-header" style={{ borderBottom: "1px solid var(--color-border)", padding: "14px 20px", marginBottom: 0 }}>
               <div>
-                <h1 className="page-header__title" style={{ fontSize: 18 }}>{currentList.name}</h1>
+                <h1 className="page-header__title" style={{ fontSize: 18 }}>
+                  🏪 {suppliers.find(s => s.id === currentList.supplierId)?.name || "No Supplier"}
+                </h1>
                 <p className="page-header__sub">
+                  👤 {currentList.createdBy || currentList.name} · {currentList.createdAt} ·{" "}
                   {currentList.items.length} item{currentList.items.length !== 1 ? "s" : ""} ·{" "}
                   <span style={{ color: "#15803d" }}>✅ {purchasedCount} purchased</span> ·{" "}
                   <span style={{ color: "#92400e" }}>⏳ {pendingCount} pending</span>
-                  {suppliers.find(s => s.id === currentList.supplierId) && (
-                    <> · 🏪 {suppliers.find(s => s.id === currentList.supplierId)?.name}</>
-                  )}
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Btn variant="secondary" size="sm" onClick={() => {
-                  setListForm({ name: currentList.name, supplierId: currentList.supplierId });
+                  setListForm({ supplierId: currentList.supplierId });
                   setModal("editList");
                 }}>
                   <Icon name="edit" size={13} /> Edit
@@ -755,25 +764,38 @@ export default function ShoppingList({
         title={modal === "newList" ? "New Buy List" : "Edit List"}
         maxWidth={440}
       >
-        <Field label="List Name" required>
-          <input
-            className="input"
-            placeholder="e.g. Weekly Restocking, Cigarette Run…"
-            value={listForm.name}
-            onChange={e => setListForm(f => ({ ...f, name: e.target.value }))}
-            autoFocus
-          />
-        </Field>
-        <Field label="Default Supplier">
+        {/* Auto-name preview banner */}
+        {modal === "newList" && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "10px 14px", borderRadius: 8, marginBottom: 16,
+            background: "#eef2ff", border: "1px solid #c7d2fe",
+            fontSize: 13, color: "#4338ca",
+          }}>
+            <span style={{ fontSize: 18 }}>👤</span>
+            <div>
+              <div style={{ fontWeight: 700 }}>
+                List name: <span style={{ color: "#4f46e5" }}>{currentUser?.name || currentUser?.email || "User"}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "#6366f1", marginTop: 1 }}>
+                Automatically set to your name
+              </div>
+            </div>
+          </div>
+        )}
+
+        <Field label="Supplier" required>
           <select
             className="select"
             value={listForm.supplierId}
             onChange={e => setListForm(f => ({ ...f, supplierId: e.target.value }))}
+            autoFocus
           >
-            <option value="">— No supplier —</option>
+            <option value="">— Select a supplier —</option>
             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </Field>
+
         <div className="modal__footer">
           <Btn variant="secondary" onClick={() => setModal(null)}>Cancel</Btn>
           <Btn onClick={modal === "newList" ? createList : updateList}>

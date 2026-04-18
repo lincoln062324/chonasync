@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import Icon from "../Components/Icon";
 import { Btn, Modal, Field } from "../Components/Primitives";
 
@@ -256,6 +256,82 @@ const SUPPLIER_CSS = `
   .star-rating-label { font-size: 12px; font-weight: 600; }
   .star-value { font-size: 12px; font-weight: 700; color: var(--color-text-secondary); }
 
+  /* ── Rate button ── */
+  .supplier-rate-btn {
+    background: none;
+    border: 1.5px solid #f59e0b;
+    color: #92400e;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.14s, color 0.14s;
+    white-space: nowrap;
+  }
+  .supplier-rate-btn:hover { background: #fef3c7; }
+
+  /* ── Rating display on card ── */
+  .supplier-rating-display {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 16px 0;
+    border-top: 1px solid var(--color-border-soft);
+  }
+  .supplier-rating-display__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .supplier-rating-display__label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .supplier-rating-comment {
+    font-size: 12px;
+    color: #44290d;
+    line-height: 1.5;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 8px 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .supplier-rating-empty {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  /* ── Rating modal stars (larger) ── */
+  .rating-modal-stars { display: flex; gap: 6px; justify-content: center; margin: 8px 0 4px; }
+  .rating-modal-star-btn {
+    background: none;
+    border: none;
+    font-size: 36px;
+    cursor: pointer;
+    color: #d1d5db;
+    line-height: 1;
+    padding: 2px 4px;
+    transition: transform 0.1s, color 0.1s;
+  }
+  .rating-modal-star-btn:hover { transform: scale(1.2); }
+  .rating-modal-label {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 20px;
+    margin-bottom: 4px;
+  }
+
   /* ── Responsive ── */
   @media (max-width: 640px) {
     .supplier-grid { grid-template-columns: 1fr; gap: 12px; }
@@ -281,33 +357,68 @@ const RATING_LABELS  = { 0:"", 1:"Poor", 2:"Fair", 3:"Good", 4:"Very Good", 5:"E
 const RATING_COLORS  = { 1:"#ef4444", 2:"#f97316", 3:"#eab308", 4:"#22c55e", 5:"#4f46e5" };
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
+// Hover state is managed via direct DOM manipulation (refs) instead of useState.
+// This prevents the parent from re-rendering on every hover, which was causing
+// the stars to flicker/reset as the card list re-mounted the component.
 function StarRating({ value, onChange, readonly = false }) {
-  const [hovered, setHovered] = useState(0);
-  const display = hovered || Math.round(value);
-  const label   = RATING_LABELS[display] || "";
-  const color   = RATING_COLORS[display] || "#f59e0b";
+  const starsRef  = useRef(null);
+  const labelRef  = useRef(null);
+  const committed = Math.round(value);
+
+  const paint = (display) => {
+    const wrap = starsRef.current;
+    if (!wrap) return;
+    const color = RATING_COLORS[display] || "#f59e0b";
+    wrap.querySelectorAll(".star-btn").forEach((btn, i) => {
+      btn.style.color = i + 1 <= display ? color : "#d1d5db";
+    });
+    if (labelRef.current) {
+      if (display) {
+        labelRef.current.textContent = display + "/5 — " + (RATING_LABELS[display] || "");
+        labelRef.current.style.color = color;
+      } else {
+        labelRef.current.textContent = "Click to rate";
+        labelRef.current.style.color = "var(--color-text-muted)";
+      }
+    }
+  };
+
+  // Callback ref: runs whenever the node mounts OR value prop changes (via re-render)
+  const starsCallbackRef = (el) => {
+    starsRef.current = el;
+    if (el) paint(committed);
+  };
+
+  const initColor = RATING_COLORS[committed] || "#f59e0b";
 
   return (
     <div className="star-rating-wrap">
       <div
-        className={`star-rating-stars${readonly ? "" : " star-rating-stars--interactive"}`}
-        onMouseLeave={() => !readonly && setHovered(0)}
+        ref={starsCallbackRef}
+        className={"star-rating-stars" + (readonly ? "" : " star-rating-stars--interactive")}
+        onMouseLeave={() => { if (!readonly) paint(committed); }}
       >
         {[1, 2, 3, 4, 5].map(n => (
-          <button key={n} type="button"
-            className={`star-btn ${n <= display ? "star-btn--filled" : "star-btn--empty"}`}
-            style={n <= display ? { color } : {}}
-            onMouseEnter={() => !readonly && setHovered(n)}
-            onClick={() => !readonly && onChange(n)}
+          <button
+            key={n}
+            type="button"
+            className="star-btn"
+            style={{ color: n <= committed ? initColor : "#d1d5db" }}
+            onMouseEnter={() => { if (!readonly) paint(n); }}
+            onClick={() => { if (!readonly) onChange(n); }}
             disabled={readonly}
-            aria-label={`Rate ${n} out of 5`}
+            aria-label={"Rate " + n + " out of 5"}
           >★</button>
         ))}
       </div>
 
       {!readonly && (
-        <span className="star-rating-label" style={{ color: display ? color : "var(--color-text-muted)" }}>
-          {display ? `${display}/5 — ${label}` : "Click to rate"}
+        <span
+          ref={labelRef}
+          className="star-rating-label"
+          style={{ color: committed ? initColor : "var(--color-text-muted)" }}
+        >
+          {committed ? committed + "/5 — " + (RATING_LABELS[committed] || "") : "Click to rate"}
         </span>
       )}
       {readonly && <span className="star-value">{Number(value).toFixed(1)}</span>}
@@ -475,7 +586,114 @@ function NotesModal({ open, onClose, supplier, onSave }) {
   );
 }
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// ─── Rating Modal ─────────────────────────────────────────────────────────────
+function RatingModal({ open, onClose, supplier, onSave }) {
+  const [hovered,  setHovered]  = useState(0);
+  const [selected, setSelected] = useState(supplier?.rating || 0);
+  const [comment,  setComment]  = useState(supplier?.ratingComment || "");
+  const [saving,   setSaving]   = useState(false);
+
+  // Reset when supplier changes
+  const prevId = useRef(null);
+  if (supplier?.id !== prevId.current) {
+    prevId.current = supplier?.id;
+  }
+
+  // Sync state when modal opens with a new supplier
+  const [lastOpenSupplier, setLastOpenSupplier] = useState(null);
+  if (open && supplier && supplier !== lastOpenSupplier) {
+    setLastOpenSupplier(supplier);
+    setSelected(supplier.rating || 0);
+    setComment(supplier.ratingComment || "");
+  }
+  if (!open && lastOpenSupplier !== null) {
+    setLastOpenSupplier(null);
+  }
+
+  const display  = hovered || selected;
+  const color    = RATING_COLORS[display] || "#d1d5db";
+
+  const handleSave = async () => {
+    if (!selected) return;
+    setSaving(true);
+    await onSave(selected, comment.trim());
+    setSaving(false);
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <Modal open={open} onClose={onClose} title={`⭐ Rate Supplier — ${supplier?.name}`} maxWidth={420}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+        {/* Stars */}
+        <div style={{ textAlign: "center" }}>
+          <div className="rating-modal-stars">
+            {[1,2,3,4,5].map(n => (
+              <button
+                key={n}
+                type="button"
+                className="rating-modal-star-btn"
+                style={{ color: n <= display ? color : "#d1d5db" }}
+                onMouseEnter={() => setHovered(n)}
+                onMouseLeave={() => setHovered(0)}
+                onClick={() => setSelected(n)}
+                aria-label={`Rate ${n} out of 5`}
+              >★</button>
+            ))}
+          </div>
+          <div className="rating-modal-label" style={{ color: display ? color : "#94a3b8" }}>
+            {display ? `${display}/5 — ${RATING_LABELS[display]}` : "Tap a star to rate"}
+          </div>
+        </div>
+
+        {/* Comment */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#44290d", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+            Comment (optional)
+          </div>
+          <textarea
+            className="notes-modal-textarea"
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            placeholder="Share your experience with this supplier — delivery speed, product quality, communication…"
+            maxLength={NOTE_MAX + 50}
+            style={{ minHeight: 100 }}
+          />
+          <div style={{ fontSize: 11, textAlign: "right", marginTop: 4, color: comment.length > NOTE_MAX ? "#dc2626" : "#94a3b8" }}>
+            {comment.length}/{NOTE_MAX}
+          </div>
+        </div>
+
+        {/* Quick chips */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {["✅ Very reliable.", "⚡ Fast delivery.", "💬 Great communication.", "⚠️ Deliveries often late.", "❌ Quality issues.", "🤝 Good pricing."].map(chip => (
+            <button key={chip}
+              onClick={() => setComment(prev => prev ? prev + " " + chip : chip)}
+              style={{
+                background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 99,
+                padding: "4px 10px", fontSize: 11, fontWeight: 600, color: "#475569",
+                cursor: "pointer",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#fef3c7"; e.currentTarget.style.borderColor = "#fbbf24"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
+            >{chip}</button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <Btn variant="secondary" onClick={onClose} disabled={saving}>Cancel</Btn>
+          <Btn onClick={handleSave} disabled={saving || !selected}>
+            {saving ? "Saving…" : "⭐ Submit Rating"}
+          </Btn>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+
 export default function SupplierManagement({
   suppliers, purchaseOrders,
   onAddSupplier, onUpdateSupplier, onDeleteSupplier,
@@ -492,6 +710,9 @@ export default function SupplierManagement({
   // inlineEditing: supplierId whose inline editor is open on the card
   const [inlineEditing, setInlineEditing] = useState(null);
   const [inlineSaving,  setInlineSaving]  = useState(false);
+
+  // ── Rating state ─────────────────────────────────────────────────────────────
+  const [ratingTarget, setRatingTarget] = useState(null);
 
   // ── Supplier form handlers ───────────────────────────────────────────────────
   const openAdd = () => {
@@ -527,8 +748,8 @@ export default function SupplierManagement({
     await onDeleteSupplier?.(id);
   };
 
-  const updateRatingInline = async (supplierId, newRating) => {
-    await onUpdateSupplier?.(supplierId, { rating: newRating });
+  const handleRatingSave = async (supplierId, newRating, comment) => {
+    await onUpdateSupplier?.(supplierId, { rating: newRating, ratingComment: comment });
   };
 
   // ── Note save (from both inline and modal) ───────────────────────────────────
@@ -605,27 +826,60 @@ export default function SupplierManagement({
                 <span className="supplier-card__stats">
                   {orders.length} orders · ₱{totalSpent.toLocaleString()}
                 </span>
-                <StarRating
-                  value={s.rating}
-                  onChange={newRating => updateRatingInline(s.id, newRating)}
-                />
+                <button
+                  className="supplier-rate-btn"
+                  onClick={() => setRatingTarget(s)}
+                  title="Rate this supplier"
+                >
+                  ⭐ {s.rating > 0 ? "Update Rating" : "Rate Supplier"}
+                </button>
               </div>
 
-              {/* ── Performance badge ── */}
-              {s.rating > 0 && (
-                <div className="supplier-card__perf">
-                  <span className="supplier-perf-badge" style={{
-                    background: s.rating >= 4 ? "#ecfdf5" : s.rating >= 3 ? "#fffbeb" : "#fef2f2",
-                    color:      s.rating >= 4 ? "#065f46" : s.rating >= 3 ? "#92400e" : "#991b1b",
-                    border:     `1px solid ${s.rating >= 4 ? "#a7f3d0" : s.rating >= 3 ? "#fde68a" : "#fecaca"}`,
-                  }}>
-                    {s.rating >= 4.5 ? "⭐ Top Performer"
-                      : s.rating >= 4  ? "✅ Good Supplier"
-                      : s.rating >= 3  ? "⚠️ Average"
-                      : "❌ Needs Improvement"}
-                  </span>
+              {/* ── Rating display ── */}
+              <div className="supplier-rating-display">
+                <div className="supplier-rating-display__header">
+                  <span className="supplier-rating-display__label">⭐ Rating</span>
+                  {s.rating > 0 && (
+                    <span className="supplier-perf-badge" style={{
+                      background: s.rating >= 4 ? "#ecfdf5" : s.rating >= 3 ? "#fffbeb" : "#fef2f2",
+                      color:      s.rating >= 4 ? "#065f46" : s.rating >= 3 ? "#92400e" : "#991b1b",
+                      border:     `1px solid ${s.rating >= 4 ? "#a7f3d0" : s.rating >= 3 ? "#fde68a" : "#fecaca"}`,
+                      fontSize: 10, padding: "2px 8px", borderRadius: 99,
+                      display: "inline-flex", alignItems: "center",
+                    }}>
+                      {s.rating >= 4.5 ? "⭐ Top Performer"
+                        : s.rating >= 4  ? "✅ Good Supplier"
+                        : s.rating >= 3  ? "⚠️ Average"
+                        : "❌ Needs Improvement"}
+                    </span>
+                  )}
                 </div>
-              )}
+
+                {s.rating > 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <span key={n} style={{
+                        fontSize: 16,
+                        color: n <= Math.round(s.rating)
+                          ? (RATING_COLORS[Math.round(s.rating)] || "#f59e0b")
+                          : "#d1d5db",
+                      }}>★</span>
+                    ))}
+                    <span style={{ fontSize: 12, fontWeight: 700, color: RATING_COLORS[Math.round(s.rating)] || "#f59e0b" }}>
+                      {Number(s.rating).toFixed(1)}/5 — {RATING_LABELS[Math.round(s.rating)]}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="supplier-rating-empty">Not yet rated. Click "Rate Supplier" to leave a review.</div>
+                )}
+
+                {s.ratingComment && s.ratingComment.trim().length > 0 && (
+                  <div className="supplier-rating-comment">
+                    💬 {s.ratingComment.length > 120 ? s.ratingComment.slice(0, 120) + "…" : s.ratingComment}
+                  </div>
+                )}
+                <div style={{ paddingBottom: 4 }} />
+              </div>
 
               {/* ══════════════════════════════════════════════════
                   ── NOTES SECTION ──
@@ -716,7 +970,7 @@ export default function SupplierManagement({
         </div>
 
         {/* Rating inside modal */}
-        <Field label="Supplier Performance Rating">
+        <Field label="Initial Rating (optional)">
           <div className="modal-rating-wrap">
             <StarRating
               value={form.rating || 0}
@@ -759,6 +1013,16 @@ export default function SupplierManagement({
         onClose={() => setNoteTarget(null)}
         supplier={noteTarget}
         onSave={handleModalSave}
+      />
+
+      {/* ══════════════════════════════════════════════════════
+          ── RATING MODAL ──
+          ══════════════════════════════════════════════════════ */}
+      <RatingModal
+        open={!!ratingTarget}
+        onClose={() => setRatingTarget(null)}
+        supplier={ratingTarget}
+        onSave={(newRating, comment) => handleRatingSave(ratingTarget.id, newRating, comment)}
       />
     </div>
   );
